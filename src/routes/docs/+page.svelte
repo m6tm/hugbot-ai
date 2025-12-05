@@ -1,0 +1,1099 @@
+<script lang="ts">
+  /**
+   * Page de documentation de l'API
+   */
+  import { goto } from "$app/navigation";
+  import { onMount } from "svelte";
+
+  let copiedIndex: number | null = $state(null);
+  let baseUrl = $state("");
+
+  onMount(() => {
+    baseUrl = window.location.origin;
+  });
+
+  function copyToClipboard(text: string, index: number) {
+    navigator.clipboard.writeText(text);
+    copiedIndex = index;
+    setTimeout(() => {
+      copiedIndex = null;
+    }, 2000);
+  }
+
+  const endpoints = [
+    {
+      method: "POST",
+      path: "/api/v1/chat/completions",
+      description: "Cree une completion de chat avec streaming optionnel",
+      auth: true,
+    },
+    {
+      method: "GET",
+      path: "/api/v1/models",
+      description: "Liste les modeles disponibles",
+      auth: false,
+    },
+  ];
+
+  const models = [
+    {
+      id: "deepseek-ai/DeepSeek-V3.2",
+      name: "DeepSeek V3.2",
+      description: "Modele DeepSeek puissant et rapide",
+    },
+    {
+      id: "Qwen/Qwen2.5-72B-Instruct",
+      name: "Qwen 2.5 72B",
+      description: "Modele Alibaba tres performant",
+    },
+    {
+      id: "meta-llama/Llama-3.3-70B-Instruct",
+      name: "Llama 3.3 70B",
+      description: "Modele Meta derniere generation",
+    },
+    {
+      id: "mistralai/Mistral-Nemo-Instruct-2407",
+      name: "Mistral Nemo",
+      description: "Modele Mistral compact et efficace",
+    },
+    {
+      id: "microsoft/Phi-3-mini-4k-instruct",
+      name: "Phi-3 Mini",
+      description: "Petit modele Microsoft tres capable",
+    },
+    {
+      id: "google/gemma-2-27b-it",
+      name: "Gemma 2 27B",
+      description: "Modele Google open source",
+    },
+  ];
+</script>
+
+<div class="docs-container">
+  <header class="docs-header">
+    <button
+      class="back-btn"
+      onclick={() => goto("/")}
+      aria-label="Retour a l'accueil"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="m12 19-7-7 7-7" />
+        <path d="M19 12H5" />
+      </svg>
+      <span>Retour</span>
+    </button>
+
+    <div class="header-content">
+      <div class="logo-badge">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"
+          />
+          <path d="M18 14h-8" />
+          <path d="M15 18h-5" />
+          <path d="M10 6h8v4h-8V6Z" />
+        </svg>
+      </div>
+      <h1>Documentation API</h1>
+      <p class="subtitle">API compatible OpenAI SDK pour Chat AI</p>
+    </div>
+  </header>
+
+  <main class="docs-content">
+    <!-- Introduction -->
+    <section class="doc-section">
+      <h2>Introduction</h2>
+      <p>
+        Cette API est compatible avec le SDK OpenAI, ce qui vous permet
+        d'utiliser votre application existante en changeant simplement la <code
+          >baseURL</code
+        >. Elle supporte le streaming Server-Sent Events (SSE) pour des reponses
+        en temps reel.
+      </p>
+
+      <div class="info-box">
+        <div class="info-icon">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 16v-4" />
+            <path d="M12 8h.01" />
+          </svg>
+        </div>
+        <div class="info-content">
+          <strong>Base URL</strong>
+          <code class="base-url">{baseUrl}/api/v1</code>
+        </div>
+      </div>
+    </section>
+
+    <!-- Authentification -->
+    <section class="doc-section">
+      <h2>Authentification</h2>
+      <p>
+        L'API utilise l'authentification Bearer Token. Incluez votre cle API
+        Hugging Face dans l'en-tete <code>Authorization</code>.
+      </p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">HTTP Header</span>
+          <button
+            class="copy-btn"
+            onclick={() =>
+              copyToClipboard("Authorization: Bearer hf_xxxxxxxxxx", 0)}
+          >
+            {#if copiedIndex === 0}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Copie !
+            {:else}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                <path
+                  d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+                />
+              </svg>
+              Copier
+            {/if}
+          </button>
+        </div>
+        <pre><code>Authorization: Bearer hf_xxxxxxxxxx</code></pre>
+      </div>
+
+      <p class="note">
+        Obtenez votre cle API gratuite sur <a
+          href="https://huggingface.co/settings/tokens"
+          target="_blank"
+          rel="noopener noreferrer">huggingface.co/settings/tokens</a
+        >
+      </p>
+    </section>
+
+    <!-- Endpoints -->
+    <section class="doc-section">
+      <h2>Endpoints</h2>
+
+      <div class="endpoints-list">
+        {#each endpoints as endpoint}
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="method {endpoint.method.toLowerCase()}"
+                >{endpoint.method}</span
+              >
+              <code class="endpoint-path">{endpoint.path}</code>
+              {#if endpoint.auth}
+                <span class="auth-badge">Auth requise</span>
+              {/if}
+            </div>
+            <p class="endpoint-desc">{endpoint.description}</p>
+          </div>
+        {/each}
+      </div>
+    </section>
+
+    <!-- Chat Completions -->
+    <section class="doc-section">
+      <h2>POST /api/v1/chat/completions</h2>
+      <p>Cree une completion de chat basee sur les messages fournis.</p>
+
+      <h3>Parametres de requete</h3>
+      <div class="params-table">
+        <div class="param-row header">
+          <span>Parametre</span>
+          <span>Type</span>
+          <span>Requis</span>
+          <span>Description</span>
+        </div>
+        <div class="param-row">
+          <code>model</code>
+          <span>string</span>
+          <span class="required">Oui</span>
+          <span>ID du modele a utiliser</span>
+        </div>
+        <div class="param-row">
+          <code>messages</code>
+          <span>array</span>
+          <span class="required">Oui</span>
+          <span>Liste des messages de la conversation</span>
+        </div>
+        <div class="param-row">
+          <code>temperature</code>
+          <span>number</span>
+          <span class="optional">Non</span>
+          <span>Creativite (0.0 - 1.0, defaut: 0.7)</span>
+        </div>
+        <div class="param-row">
+          <code>max_tokens</code>
+          <span>number</span>
+          <span class="optional">Non</span>
+          <span>Nombre max de tokens (defaut: 1024)</span>
+        </div>
+        <div class="param-row">
+          <code>stream</code>
+          <span>boolean</span>
+          <span class="optional">Non</span>
+          <span>Activer le streaming SSE (defaut: false)</span>
+        </div>
+      </div>
+
+      <h3>Exemple avec SDK OpenAI (Node.js)</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <button
+            class="copy-btn"
+            onclick={() =>
+              copyToClipboard(
+                `import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "${baseUrl}/api/v1",
+  apiKey: "hf_xxxxxxxxxx",
+});
+
+// Mode standard
+const response = await client.chat.completions.create({
+  model: "deepseek-ai/DeepSeek-V3.2",
+  messages: [
+    { role: "system", content: "Tu es un assistant helpful." },
+    { role: "user", content: "Bonjour !" }
+  ],
+  temperature: 0.7,
+  max_tokens: 1024,
+});
+
+console.log(response.choices[0].message.content);`,
+                1
+              )}
+          >
+            {#if copiedIndex === 1}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Copie !
+            {:else}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                <path
+                  d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+                />
+              </svg>
+              Copier
+            {/if}
+          </button>
+        </div>
+        <pre><code
+            ><span class="keyword">import</span> OpenAI <span class="keyword"
+              >from</span
+            > <span class="string">"openai"</span>;
+
+<span class="keyword">const</span> client = <span class="keyword">new</span
+            > <span class="class">OpenAI</span>(&#123;
+  baseURL: <span class="string">"{baseUrl}/api/v1"</span>,
+  apiKey: <span class="string">"hf_xxxxxxxxxx"</span>,
+&#125;);
+
+<span class="comment">// Mode standard</span>
+<span class="keyword">const</span> response = <span class="keyword">await</span
+            > client.chat.completions.<span class="function">create</span
+            >(&#123;
+  model: <span class="string">"deepseek-ai/DeepSeek-V3.2"</span>,
+  messages: [
+    &#123; role: <span class="string">"system"</span>, content: <span
+              class="string">"Tu es un assistant helpful."</span
+            > &#125;,
+    &#123; role: <span class="string">"user"</span>, content: <span
+              class="string">"Bonjour !"</span
+            > &#125;
+  ],
+  temperature: <span class="number">0.7</span>,
+  max_tokens: <span class="number">1024</span>,
+&#125;);
+
+console.<span class="function">log</span>(response.choices[<span class="number"
+              >0</span
+            >].message.content);</code
+          ></pre>
+      </div>
+
+      <h3>Exemple avec streaming</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">TypeScript</span>
+          <button
+            class="copy-btn"
+            onclick={() =>
+              copyToClipboard(
+                `import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "${baseUrl}/api/v1",
+  apiKey: "hf_xxxxxxxxxx",
+});
+
+const stream = await client.chat.completions.create({
+  model: "deepseek-ai/DeepSeek-V3.2",
+  messages: [{ role: "user", content: "Raconte une histoire" }],
+  stream: true,
+});
+
+for await (const chunk of stream) {
+  const content = chunk.choices[0]?.delta?.content || "";
+  process.stdout.write(content);
+}`,
+                2
+              )}
+          >
+            {#if copiedIndex === 2}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Copie !
+            {:else}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                <path
+                  d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+                />
+              </svg>
+              Copier
+            {/if}
+          </button>
+        </div>
+        <pre><code
+            ><span class="keyword">import</span> OpenAI <span class="keyword"
+              >from</span
+            > <span class="string">"openai"</span>;
+
+<span class="keyword">const</span> client = <span class="keyword">new</span
+            > <span class="class">OpenAI</span>(&#123;
+  baseURL: <span class="string">"{baseUrl}/api/v1"</span>,
+  apiKey: <span class="string">"hf_xxxxxxxxxx"</span>,
+&#125;);
+
+<span class="keyword">const</span> stream = <span class="keyword">await</span
+            > client.chat.completions.<span class="function">create</span
+            >(&#123;
+  model: <span class="string">"deepseek-ai/DeepSeek-V3.2"</span>,
+  messages: [&#123; role: <span class="string">"user"</span>, content: <span
+              class="string">"Raconte une histoire"</span
+            > &#125;],
+  stream: <span class="boolean">true</span>,
+&#125;);
+
+<span class="keyword">for await</span> (<span class="keyword">const</span
+            > chunk <span class="keyword">of</span> stream) &#123;
+  <span class="keyword">const</span> content = chunk.choices[<span
+              class="number">0</span
+            >]?.delta?.content || <span class="string">""</span>;
+  process.stdout.<span class="function">write</span>(content);
+&#125;</code
+          ></pre>
+      </div>
+
+      <h3>Exemple avec cURL</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">Bash</span>
+          <button
+            class="copy-btn"
+            onclick={() =>
+              copyToClipboard(
+                `curl -X POST "${baseUrl}/api/v1/chat/completions" \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer hf_xxxxxxxxxx" \\
+  -d '{
+    "model": "deepseek-ai/DeepSeek-V3.2",
+    "messages": [{"role": "user", "content": "Bonjour !"}],
+    "temperature": 0.7,
+    "max_tokens": 1024
+  }'`,
+                3
+              )}
+          >
+            {#if copiedIndex === 3}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Copie !
+            {:else}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                <path
+                  d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+                />
+              </svg>
+              Copier
+            {/if}
+          </button>
+        </div>
+        <pre><code
+            >curl -X POST <span class="string"
+              >"{baseUrl}/api/v1/chat/completions"</span
+            > \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -H <span class="string">"Authorization: Bearer hf_xxxxxxxxxx"</span> \
+  -d <span class="string"
+              >'&#123;
+    "model": "deepseek-ai/DeepSeek-V3.2",
+    "messages": [&#123;"role": "user", "content": "Bonjour !"&#125;],
+    "temperature": 0.7,
+    "max_tokens": 1024
+  &#125;'</span
+            ></code
+          ></pre>
+      </div>
+
+      <h3>Format de reponse</h3>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">JSON</span>
+        </div>
+        <pre><code
+            >&#123;
+  <span class="string">"id"</span>: <span class="string">"chatcmpl-abc123"</span
+            >,
+  <span class="string">"object"</span>: <span class="string"
+              >"chat.completion"</span
+            >,
+  <span class="string">"created"</span>: <span class="number">1701234567</span>,
+  <span class="string">"model"</span>: <span class="string"
+              >"deepseek-ai/DeepSeek-V3.2"</span
+            >,
+  <span class="string">"choices"</span>: [
+    &#123;
+      <span class="string">"index"</span>: <span class="number">0</span>,
+      <span class="string">"message"</span>: &#123;
+        <span class="string">"role"</span>: <span class="string"
+              >"assistant"</span
+            >,
+        <span class="string">"content"</span>: <span class="string"
+              >"Bonjour ! Comment puis-je vous aider ?"</span
+            >
+      &#125;,
+      <span class="string">"finish_reason"</span>: <span class="string"
+              >"stop"</span
+            >
+    &#125;
+  ],
+  <span class="string">"usage"</span>: &#123;
+    <span class="string">"prompt_tokens"</span>: <span class="number">10</span>,
+    <span class="string">"completion_tokens"</span>: <span class="number"
+              >15</span
+            >,
+    <span class="string">"total_tokens"</span>: <span class="number">25</span>
+  &#125;
+&#125;</code
+          ></pre>
+      </div>
+    </section>
+
+    <!-- Modeles -->
+    <section class="doc-section">
+      <h2>Modeles disponibles</h2>
+      <p>Voici la liste des modeles actuellement disponibles :</p>
+
+      <div class="models-grid">
+        {#each models as model}
+          <div class="model-card">
+            <div class="model-name">{model.name}</div>
+            <code class="model-id">{model.id}</code>
+            <p class="model-desc">{model.description}</p>
+          </div>
+        {/each}
+      </div>
+    </section>
+
+    <!-- Erreurs -->
+    <section class="doc-section">
+      <h2>Codes d'erreur</h2>
+
+      <div class="errors-table">
+        <div class="error-row header">
+          <span>Code</span>
+          <span>Type</span>
+          <span>Description</span>
+        </div>
+        <div class="error-row">
+          <span class="error-code">401</span>
+          <code>missing_api_key</code>
+          <span>Cle API manquante ou invalide</span>
+        </div>
+        <div class="error-row">
+          <span class="error-code">400</span>
+          <code>invalid_request</code>
+          <span>Requete mal formee</span>
+        </div>
+        <div class="error-row">
+          <span class="error-code">500</span>
+          <code>api_error</code>
+          <span>Erreur interne du serveur</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="docs-footer">
+    <p>Chat AI API v1.0 &bull; Compatible OpenAI SDK</p>
+  </footer>
+</div>
+
+<style>
+  .docs-container {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 100%);
+    color: #e2e8f0;
+  }
+
+  .docs-header {
+    padding: 40px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    margin-bottom: 32px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: #94a3b8;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .back-btn:hover {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: rgba(102, 126, 234, 0.3);
+    color: #a5b4fc;
+    transform: translateX(-4px);
+  }
+
+  .header-content {
+    text-align: center;
+  }
+
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    color: white;
+    margin-bottom: 24px;
+  }
+
+  h1 {
+    font-size: 36px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0 0 12px;
+  }
+
+  .subtitle {
+    color: #94a3b8;
+    font-size: 18px;
+    margin: 0;
+  }
+
+  .docs-content {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 40px;
+  }
+
+  .doc-section {
+    margin-bottom: 48px;
+  }
+
+  .doc-section h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #f8fafc;
+    margin: 0 0 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .doc-section h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin: 32px 0 16px;
+  }
+
+  .doc-section p {
+    color: #94a3b8;
+    line-height: 1.7;
+    margin: 0 0 16px;
+  }
+
+  code {
+    background: rgba(102, 126, 234, 0.15);
+    color: #a5b4fc;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 14px;
+  }
+
+  .info-box {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 12px;
+    margin: 24px 0;
+  }
+
+  .info-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(102, 126, 234, 0.2);
+    border-radius: 10px;
+    color: #667eea;
+    flex-shrink: 0;
+  }
+
+  .info-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .info-content strong {
+    color: #e2e8f0;
+    font-size: 14px;
+  }
+
+  .base-url {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 8px 12px;
+    font-size: 15px;
+  }
+
+  .code-block {
+    background: #0d1117;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 16px 0;
+  }
+
+  .code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .code-lang {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .copy-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 6px;
+    color: #94a3b8;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .copy-btn:hover {
+    background: rgba(102, 126, 234, 0.2);
+    color: #a5b4fc;
+  }
+
+  .code-block pre {
+    margin: 0;
+    padding: 20px;
+    overflow-x: auto;
+  }
+
+  .code-block pre code {
+    background: transparent;
+    padding: 0;
+    color: #e2e8f0;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .code-block .keyword {
+    color: #ff79c6;
+  }
+  .code-block .string {
+    color: #f1fa8c;
+  }
+  .code-block .number {
+    color: #bd93f9;
+  }
+  .code-block .boolean {
+    color: #bd93f9;
+  }
+  .code-block .function {
+    color: #50fa7b;
+  }
+  .code-block .class {
+    color: #8be9fd;
+  }
+  .code-block .comment {
+    color: #6272a4;
+  }
+
+  .note {
+    font-size: 14px;
+    color: #6b7280;
+  }
+
+  .note a {
+    color: #667eea;
+    text-decoration: none;
+  }
+
+  .note a:hover {
+    text-decoration: underline;
+  }
+
+  .endpoints-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .endpoint-card {
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    transition: all 0.2s;
+  }
+
+  .endpoint-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(102, 126, 234, 0.2);
+  }
+
+  .endpoint-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .method {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .method.post {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+  }
+
+  .method.get {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+  }
+
+  .endpoint-path {
+    background: transparent;
+    color: #e2e8f0;
+    font-size: 15px;
+  }
+
+  .auth-badge {
+    padding: 4px 10px;
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .endpoint-desc {
+    margin: 8px 0 0;
+    font-size: 14px;
+  }
+
+  .params-table,
+  .errors-table {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .param-row,
+  .error-row {
+    display: grid;
+    grid-template-columns: 140px 80px 80px 1fr;
+    gap: 16px;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    align-items: center;
+  }
+
+  .error-row {
+    grid-template-columns: 80px 160px 1fr;
+  }
+
+  .param-row.header,
+  .error-row.header {
+    background: rgba(255, 255, 255, 0.05);
+    font-weight: 600;
+    color: #e2e8f0;
+    font-size: 13px;
+  }
+
+  .param-row:last-child,
+  .error-row:last-child {
+    border-bottom: none;
+  }
+
+  .param-row code {
+    background: transparent;
+    color: #a5b4fc;
+    padding: 0;
+  }
+
+  .param-row span,
+  .error-row span {
+    color: #94a3b8;
+    font-size: 14px;
+  }
+
+  .required {
+    color: #ef4444 !important;
+    font-weight: 500;
+  }
+
+  .optional {
+    color: #6b7280 !important;
+  }
+
+  .error-code {
+    font-weight: 600;
+    color: #ef4444 !important;
+  }
+
+  .models-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .model-card {
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    transition: all 0.2s;
+  }
+
+  .model-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(102, 126, 234, 0.2);
+    transform: translateY(-2px);
+  }
+
+  .model-name {
+    font-weight: 600;
+    color: #f8fafc;
+    margin-bottom: 8px;
+  }
+
+  .model-id {
+    display: block;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 6px 10px;
+    font-size: 12px;
+    margin-bottom: 12px;
+    word-break: break-all;
+  }
+
+  .model-desc {
+    font-size: 13px;
+    margin: 0;
+  }
+
+  .docs-footer {
+    text-align: center;
+    padding: 40px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    color: #6b7280;
+    font-size: 14px;
+  }
+
+  @media (max-width: 768px) {
+    .docs-header,
+    .docs-content {
+      padding: 24px;
+    }
+
+    h1 {
+      font-size: 28px;
+    }
+
+    .param-row {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .param-row.header {
+      display: none;
+    }
+
+    .error-row {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .error-row.header {
+      display: none;
+    }
+
+    .models-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
