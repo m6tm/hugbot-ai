@@ -13,15 +13,15 @@ export interface AIModel {
 }
 
 export const availableModels: AIModel[] = [
-  {
-    id: "mock",
-    name: "Demo (Mock)",
-    provider: "mock",
-    modelId: "mock",
-    description: "Mode demonstration sans API",
-    maxTokens: 2048,
-    isDefault: true,
-  },
+  // Désactivé pour l'instant
+  // {
+  //   id: "mock",
+  //   name: "Demo (Mock)",
+  //   provider: "mock",
+  //   modelId: "mock",
+  //   description: "Mode demonstration sans API",
+  //   maxTokens: 2048,
+  // },
   {
     id: "deepseek-v3",
     name: "DeepSeek V3.2",
@@ -29,6 +29,7 @@ export const availableModels: AIModel[] = [
     modelId: "deepseek-ai/DeepSeek-V3.2",
     description: "Modele DeepSeek puissant et rapide",
     maxTokens: 4096,
+    isDefault: true,
   },
   {
     id: "qwen-72b",
