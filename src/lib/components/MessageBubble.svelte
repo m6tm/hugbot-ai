@@ -3,7 +3,8 @@
    * Composant MessageBubble - Bulle de message
    */
   import type { Message } from "$lib/domain/entities/message";
-  import { marked } from "marked";
+  import { marked, type Tokens } from "marked";
+  import hljs from "highlight.js";
 
   interface Props {
     message: Message;
@@ -15,11 +16,36 @@
 
   const isUser = $derived(message.role === "user");
 
-  // Configuration de marked pour le rendu markdown
+  // Renderer personnalise pour les blocs de code avec highlight.js
+  const renderer = new marked.Renderer();
+
+  renderer.code = ({ text, lang }: Tokens.Code) => {
+    const language = lang && hljs.getLanguage(lang) ? lang : "plaintext";
+    const highlighted = hljs.highlight(text, { language }).value;
+    const languageLabel = lang || "code";
+
+    return `<div class="code-block">
+      <div class="code-header">
+        <span class="code-language">${languageLabel}</span>
+        <button class="copy-code-btn" onclick="navigator.clipboard.writeText(this.closest('.code-block').querySelector('code').textContent)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+          </svg>
+          Copier
+        </button>
+      </div>
+      <pre><code class="hljs language-${language}">${highlighted}</code></pre>
+    </div>`;
+  };
+
+  // Configuration de marked
   marked.setOptions({
     breaks: true,
     gfm: true,
   });
+
+  marked.use({ renderer });
 
   /**
    * Parse le contenu markdown et retourne le HTML
@@ -409,24 +435,179 @@
     color: #a5b4fc;
     padding: 0.15em 0.4em;
     border-radius: 4px;
-    font-family: "Fira Code", "JetBrains Mono", monospace;
+    font-family: "Fira Code", "JetBrains Mono", "Consolas", monospace;
     font-size: 0.9em;
   }
 
-  .markdown-content :global(pre) {
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    padding: 1em;
-    overflow-x: auto;
+  /* Styles pour les blocs de code avec highlight.js */
+  .markdown-content :global(.code-block) {
     margin: 1em 0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #1a1b26;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  .markdown-content :global(pre code) {
+  .markdown-content :global(.code-header) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .markdown-content :global(.code-language) {
+    font-size: 12px;
+    font-weight: 600;
+    color: #818cf8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .markdown-content :global(.copy-code-btn) {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: #9ca3af;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .markdown-content :global(.copy-code-btn:hover) {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+  }
+
+  .markdown-content :global(.code-block pre) {
+    margin: 0;
+    padding: 16px;
+    overflow-x: auto;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+  }
+
+  .markdown-content :global(.code-block code) {
     background: transparent;
     padding: 0;
     font-size: 0.85em;
-    line-height: 1.5;
+    line-height: 1.6;
+    color: #e5e7eb;
+  }
+
+  /* Styles highlight.js - Theme Tokyo Night */
+  .markdown-content :global(.hljs-comment),
+  .markdown-content :global(.hljs-quote) {
+    color: #565f89;
+    font-style: italic;
+  }
+
+  .markdown-content :global(.hljs-keyword),
+  .markdown-content :global(.hljs-selector-tag) {
+    color: #bb9af7;
+  }
+
+  .markdown-content :global(.hljs-string),
+  .markdown-content :global(.hljs-template-variable),
+  .markdown-content :global(.hljs-addition) {
+    color: #9ece6a;
+  }
+
+  .markdown-content :global(.hljs-number),
+  .markdown-content :global(.hljs-literal) {
+    color: #ff9e64;
+  }
+
+  .markdown-content :global(.hljs-function) {
+    color: #7aa2f7;
+  }
+
+  .markdown-content :global(.hljs-title),
+  .markdown-content :global(.hljs-section) {
+    color: #7dcfff;
+  }
+
+  .markdown-content :global(.hljs-class .hljs-title),
+  .markdown-content :global(.hljs-type) {
+    color: #2ac3de;
+  }
+
+  .markdown-content :global(.hljs-variable),
+  .markdown-content :global(.hljs-template-variable) {
+    color: #c0caf5;
+  }
+
+  .markdown-content :global(.hljs-attr),
+  .markdown-content :global(.hljs-attribute) {
+    color: #7aa2f7;
+  }
+
+  .markdown-content :global(.hljs-params) {
+    color: #e0af68;
+  }
+
+  .markdown-content :global(.hljs-meta) {
+    color: #f7768e;
+  }
+
+  .markdown-content :global(.hljs-built_in) {
+    color: #7dcfff;
+  }
+
+  .markdown-content :global(.hljs-symbol),
+  .markdown-content :global(.hljs-bullet) {
+    color: #73daca;
+  }
+
+  .markdown-content :global(.hljs-deletion) {
+    color: #f7768e;
+    background: rgba(247, 118, 142, 0.1);
+  }
+
+  .markdown-content :global(.hljs-addition) {
+    background: rgba(158, 206, 106, 0.1);
+  }
+
+  .markdown-content :global(.hljs-emphasis) {
+    font-style: italic;
+  }
+
+  .markdown-content :global(.hljs-strong) {
+    font-weight: bold;
+  }
+
+  .markdown-content :global(.hljs-punctuation) {
+    color: #89ddff;
+  }
+
+  .markdown-content :global(.hljs-property) {
+    color: #73daca;
+  }
+
+  .markdown-content :global(.hljs-tag) {
+    color: #f7768e;
+  }
+
+  .markdown-content :global(.hljs-name) {
+    color: #f7768e;
+  }
+
+  .markdown-content :global(.hljs-selector-class) {
+    color: #9ece6a;
+  }
+
+  .markdown-content :global(.hljs-selector-id) {
+    color: #e0af68;
+  }
+
+  .markdown-content :global(.hljs-regexp) {
+    color: #b4f9f8;
   }
 
   .markdown-content :global(blockquote) {
