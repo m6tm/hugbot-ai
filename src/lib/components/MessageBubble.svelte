@@ -241,6 +241,37 @@
     align-items: flex-end;
   }
 
+  /* Layout mobile : avatar au-dessus du message */
+  @media (max-width: 767px) {
+    .message-bubble {
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .message-bubble.user {
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .message-bubble.user .avatar {
+      order: 0;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+    }
+
+    .content-wrapper {
+      max-width: 100%;
+      width: 100%;
+    }
+
+    .user .content-wrapper {
+      align-items: flex-end;
+    }
+  }
+
   .header {
     display: flex;
     align-items: center;

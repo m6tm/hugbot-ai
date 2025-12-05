@@ -32,7 +32,9 @@
             : ""}
         </span>
       </div>
-      <ModelSelector />
+      <div class="header-right">
+        <ModelSelector />
+      </div>
     </div>
 
     <div class="messages-container" bind:this={messagesContainer}>
@@ -103,19 +105,16 @@
     background: rgba(0, 0, 0, 0.2);
   }
 
-  /* Espace pour le bouton hamburger sur mobile */
-  @media (max-width: 767px) {
-    .chat-header {
-      padding-left: 72px;
-    }
-  }
-
   .header-left {
     display: flex;
     flex-direction: column;
     gap: 2px;
     min-width: 0;
     flex: 1;
+  }
+
+  .header-right {
+    flex-shrink: 0;
   }
 
   .chat-title {
@@ -134,6 +133,24 @@
     background: rgba(255, 255, 255, 0.05);
     padding: 6px 12px;
     border-radius: 20px;
+    display: inline-block;
+    width: fit-content;
+  }
+
+  /* Header compact sur mobile */
+  @media (max-width: 767px) {
+    .chat-header {
+      padding: 12px 16px 12px 72px;
+      gap: 12px;
+    }
+
+    .header-left {
+      display: none;
+    }
+
+    .header-right {
+      flex: 1;
+    }
   }
 
   .messages-container {
