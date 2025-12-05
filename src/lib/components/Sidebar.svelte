@@ -333,8 +333,7 @@
   .search-icon {
     position: absolute;
     left: 28px;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 12px;
     color: #6b7280;
     pointer-events: none;
   }
