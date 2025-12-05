@@ -14,11 +14,6 @@
   );
 
   function selectModel(model: AIModel) {
-    if (model.provider !== "mock" && !$settingsStore.isApiKeyConfigured) {
-      isOpen = false;
-      goto("/settings");
-      return;
-    }
     settingsStore.setModel(model.id);
     isOpen = false;
   }
@@ -70,9 +65,6 @@
             <div class="option-content">
               <div class="option-header">
                 <span class="option-name">{model.name}</span>
-                {#if model.provider !== "mock" && !$settingsStore.isApiKeyConfigured}
-                  <span class="badge">Cle requise</span>
-                {/if}
               </div>
               <span class="option-desc">{model.description}</span>
             </div>
@@ -233,14 +225,6 @@
     font-size: 14px;
     font-weight: 500;
     color: #e5e7eb;
-  }
-
-  .badge {
-    font-size: 10px;
-    padding: 2px 6px;
-    background: rgba(245, 158, 11, 0.2);
-    color: #f59e0b;
-    border-radius: 4px;
   }
 
   .option-desc {

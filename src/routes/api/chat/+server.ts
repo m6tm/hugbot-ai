@@ -4,7 +4,7 @@
  */
 
 import type { RequestHandler } from "./$types";
-import { HUGGINGFACE_API_KEY } from "$env/static/private";
+import { env } from "$env/dynamic/private";
 import { OpenAI } from "openai";
 
 interface ChatMessage {
@@ -34,7 +34,14 @@ export const POST: RequestHandler = async ({ request }) => {
     } = body;
 
     // Utilise la cle de l'utilisateur si fournie, sinon la cle du serveur
-    const effectiveApiKey = apiKey || HUGGINGFACE_API_KEY;
+    const effectiveApiKey = apiKey || env.HUGGINGFACE_API_KEY;
+
+    console.log("API Key from user:", apiKey ? "provided" : "not provided");
+    console.log(
+      "API Key from env:",
+      env.HUGGINGFACE_API_KEY ? "configured" : "NOT CONFIGURED"
+    );
+    console.log("Effective API Key:", effectiveApiKey ? "OK" : "MISSING");
 
     if (!effectiveApiKey) {
       return new Response(
