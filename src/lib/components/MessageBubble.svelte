@@ -3,6 +3,7 @@
    * Composant MessageBubble - Bulle de message
    */
   import type { Message } from "$lib/domain/entities/message";
+  import { marked } from "marked";
 
   interface Props {
     message: Message;
@@ -13,6 +14,24 @@
   let copied = $state(false);
 
   const isUser = $derived(message.role === "user");
+
+  // Configuration de marked pour le rendu markdown
+  marked.setOptions({
+    breaks: true,
+    gfm: true,
+  });
+
+  /**
+   * Parse le contenu markdown et retourne le HTML
+   */
+  function parseMarkdown(content: string): string {
+    if (isUser) {
+      return content;
+    }
+    return marked.parse(content) as string;
+  }
+
+  const parsedContent = $derived(parseMarkdown(message.content));
 
   async function copyToClipboard() {
     try {
@@ -80,7 +99,13 @@
     </div>
 
     <div class="content">
-      <p>{message.content}</p>
+      {#if isUser}
+        <p>{message.content}</p>
+      {:else}
+        <div class="markdown-content">
+          {@html parsedContent}
+        </div>
+      {/if}
       {#if message.isStreaming}
         <span class="typing-indicator">
           <span class="dot"></span>
@@ -304,5 +329,155 @@
   .action-btn:hover {
     background: rgba(255, 255, 255, 0.1);
     color: white;
+  }
+
+  /* Styles pour le contenu Markdown */
+  .markdown-content {
+    line-height: 1.7;
+  }
+
+  .markdown-content :global(h1),
+  .markdown-content :global(h2),
+  .markdown-content :global(h3),
+  .markdown-content :global(h4),
+  .markdown-content :global(h5),
+  .markdown-content :global(h6) {
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+    color: #f3f4f6;
+  }
+
+  .markdown-content :global(h1) {
+    font-size: 1.5em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 0.3em;
+  }
+
+  .markdown-content :global(h2) {
+    font-size: 1.3em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 0.3em;
+  }
+
+  .markdown-content :global(h3) {
+    font-size: 1.15em;
+  }
+
+  .markdown-content :global(h4) {
+    font-size: 1em;
+  }
+
+  .markdown-content :global(p) {
+    margin: 0.8em 0;
+  }
+
+  .markdown-content :global(p:first-child) {
+    margin-top: 0;
+  }
+
+  .markdown-content :global(p:last-child) {
+    margin-bottom: 0;
+  }
+
+  .markdown-content :global(ul),
+  .markdown-content :global(ol) {
+    margin: 0.8em 0;
+    padding-left: 1.5em;
+  }
+
+  .markdown-content :global(li) {
+    margin: 0.3em 0;
+  }
+
+  .markdown-content :global(li::marker) {
+    color: #667eea;
+  }
+
+  .markdown-content :global(strong) {
+    font-weight: 600;
+    color: #f9fafb;
+  }
+
+  .markdown-content :global(em) {
+    font-style: italic;
+    color: #d1d5db;
+  }
+
+  .markdown-content :global(code) {
+    background: rgba(102, 126, 234, 0.15);
+    color: #a5b4fc;
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    font-family: "Fira Code", "JetBrains Mono", monospace;
+    font-size: 0.9em;
+  }
+
+  .markdown-content :global(pre) {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 1em;
+    overflow-x: auto;
+    margin: 1em 0;
+  }
+
+  .markdown-content :global(pre code) {
+    background: transparent;
+    padding: 0;
+    font-size: 0.85em;
+    line-height: 1.5;
+  }
+
+  .markdown-content :global(blockquote) {
+    border-left: 3px solid #667eea;
+    margin: 1em 0;
+    padding: 0.5em 1em;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 0 8px 8px 0;
+    color: #d1d5db;
+  }
+
+  .markdown-content :global(blockquote p) {
+    margin: 0;
+  }
+
+  .markdown-content :global(a) {
+    color: #818cf8;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .markdown-content :global(a:hover) {
+    color: #a5b4fc;
+    text-decoration: underline;
+  }
+
+  .markdown-content :global(hr) {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 1.5em 0;
+  }
+
+  .markdown-content :global(table) {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+  }
+
+  .markdown-content :global(th),
+  .markdown-content :global(td) {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.5em 0.8em;
+    text-align: left;
+  }
+
+  .markdown-content :global(th) {
+    background: rgba(102, 126, 234, 0.2);
+    font-weight: 600;
+  }
+
+  .markdown-content :global(tr:nth-child(even)) {
+    background: rgba(255, 255, 255, 0.02);
   }
 </style>
