@@ -6,10 +6,33 @@
   import ConversationItem from "./ConversationItem.svelte";
   import IconButton from "./ui/IconButton.svelte";
   import { goto } from "$app/navigation";
+  import { onMount, onDestroy } from "svelte";
 
   let isCollapsed = $state(false);
+  let isMobileOpen = $state(false);
+  let isMobile = $state(false);
   let searchQuery = $state("");
   let showUserMenu = $state(false);
+
+  const MOBILE_BREAKPOINT = 768;
+
+  function checkMobile() {
+    isMobile = window.innerWidth < MOBILE_BREAKPOINT;
+    if (!isMobile) {
+      isMobileOpen = false;
+    }
+  }
+
+  onMount(() => {
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+  });
+
+  onDestroy(() => {
+    if (typeof window !== "undefined") {
+      window.removeEventListener("resize", checkMobile);
+    }
+  });
 
   const filteredConversations = $derived(
     $chatStore.conversations.filter((conv) =>
@@ -19,10 +42,21 @@
 
   async function handleNewChat() {
     await chatStore.createConversation();
+    if (isMobile) {
+      isMobileOpen = false;
+    }
   }
 
   function toggleSidebar() {
-    isCollapsed = !isCollapsed;
+    if (isMobile) {
+      isMobileOpen = !isMobileOpen;
+    } else {
+      isCollapsed = !isCollapsed;
+    }
+  }
+
+  function closeMobileSidebar() {
+    isMobileOpen = false;
   }
 
   function toggleUserMenu() {
@@ -30,17 +64,68 @@
   }
 
   function handleClearAllConversations() {
-    // A implementer si necessaire
     showUserMenu = false;
+  }
+
+  function handleConversationClick() {
+    if (isMobile) {
+      isMobileOpen = false;
+    }
   }
 </script>
 
-<aside class="sidebar" class:collapsed={isCollapsed}>
+<!-- Bouton mobile visible uniquement sur petit ecran -->
+{#if isMobile && !isMobileOpen}
+  <button
+    class="mobile-toggle-btn"
+    onclick={toggleSidebar}
+    aria-label="Ouvrir le menu"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+  </button>
+{/if}
+
+<!-- Overlay pour fermer la sidebar sur mobile -->
+{#if isMobile && isMobileOpen}
+  <div
+    class="sidebar-overlay"
+    onclick={closeMobileSidebar}
+    onkeydown={(e) => e.key === "Escape" && closeMobileSidebar()}
+    role="button"
+    tabindex="-1"
+    aria-label="Fermer le menu"
+  ></div>
+{/if}
+
+<aside
+  class="sidebar"
+  class:collapsed={isCollapsed}
+  class:mobile={isMobile}
+  class:mobile-open={isMobileOpen}
+>
   <div class="sidebar-header">
     <IconButton
-      icon="menu"
+      icon={isMobile ? "close" : "menu"}
       onclick={toggleSidebar}
-      ariaLabel={isCollapsed ? "Ouvrir le menu" : "Fermer le menu"}
+      ariaLabel={isMobile
+        ? "Fermer le menu"
+        : isCollapsed
+          ? "Ouvrir le menu"
+          : "Fermer le menu"}
     />
 
     {#if !isCollapsed}
@@ -120,10 +205,16 @@
         </div>
       {:else}
         {#each filteredConversations as conversation (conversation.id)}
-          <ConversationItem
-            {conversation}
-            isActive={$currentConversation?.id === conversation.id}
-          />
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            onclick={handleConversationClick}
+            onkeydown={(e) => e.key === "Enter" && handleConversationClick()}
+          >
+            <ConversationItem
+              {conversation}
+              isActive={$currentConversation?.id === conversation.id}
+            />
+          </div>
         {/each}
       {/if}
     </nav>
@@ -528,5 +619,96 @@
     height: 1px;
     background: rgba(255, 255, 255, 0.1);
     margin: 8px 0;
+  }
+
+  /* Bouton hamburger mobile */
+  .mobile-toggle-btn {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .mobile-toggle-btn:hover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    transform: scale(1.05);
+  }
+
+  /* Overlay sombre pour fermer la sidebar */
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 1001;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* Sidebar en mode mobile */
+  .sidebar.mobile {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1002;
+    width: 300px;
+    max-width: 85vw;
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: none;
+  }
+
+  .sidebar.mobile.mobile-open {
+    transform: translateX(0);
+    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.5);
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  /* Ajustements pour le header sur mobile */
+  .sidebar.mobile .sidebar-header {
+    padding: 16px;
+  }
+
+  /* Animation de fermeture */
+  @media (max-width: 767px) {
+    .sidebar:not(.mobile-open) {
+      pointer-events: none;
+    }
+
+    .sidebar.mobile-open {
+      pointer-events: auto;
+    }
   }
 </style>

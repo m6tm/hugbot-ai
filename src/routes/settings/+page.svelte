@@ -3,6 +3,7 @@
    * Page des parametres
    */
   import { settingsStore, themeStore } from "$lib/stores";
+  import { goto } from "$app/navigation";
   import { onMount } from "svelte";
 
   let apiKey = $state("");
@@ -31,6 +32,27 @@
 
 <div class="settings-container">
   <header class="settings-header">
+    <button
+      class="back-btn"
+      onclick={() => goto("/")}
+      aria-label="Retour a l'accueil"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="m12 19-7-7 7-7" />
+        <path d="M19 12H5" />
+      </svg>
+      <span>Retour</span>
+    </button>
     <h1>Parametres</h1>
     <p class="subtitle">Gerez vos preferences et configurations AI</p>
   </header>
@@ -223,6 +245,37 @@
   .subtitle {
     color: #94a3b8;
     font-size: 16px;
+  }
+
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    margin-bottom: 24px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: #94a3b8;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .back-btn:hover {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: rgba(102, 126, 234, 0.3);
+    color: #a5b4fc;
+    transform: translateX(-4px);
+  }
+
+  .back-btn svg {
+    transition: transform 0.2s ease;
+  }
+
+  .back-btn:hover svg {
+    transform: translateX(-2px);
   }
 
   .settings-grid {

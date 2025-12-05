@@ -164,6 +164,13 @@
     overflow-y: auto;
   }
 
+  /* Espace pour le bouton hamburger sur mobile */
+  @media (max-width: 767px) {
+    .welcome-screen {
+      padding-top: 25rem;
+    }
+  }
+
   .welcome-content {
     text-align: center;
     max-width: 800px;

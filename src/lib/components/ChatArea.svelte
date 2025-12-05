@@ -103,6 +103,13 @@
     background: rgba(0, 0, 0, 0.2);
   }
 
+  /* Espace pour le bouton hamburger sur mobile */
+  @media (max-width: 767px) {
+    .chat-header {
+      padding-left: 72px;
+    }
+  }
+
   .header-left {
     display: flex;
     flex-direction: column;
