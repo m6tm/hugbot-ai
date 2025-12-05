@@ -1,9 +1,9 @@
 /**
- * Adaptateur Hugging Face utilisant le SDK OpenAI
- * Utilise l'endpoint router.huggingface.co/v1
+ * Adaptateur Hugging Face
+ * Envoie les requetes a la route API serveur
+ * Supporte le streaming avec Server-Sent Events (SSE)
  */
 
-import { OpenAI } from "openai";
 import type { Message } from "$lib/domain/entities/message";
 import type {
   ChatServicePort,
@@ -11,29 +11,22 @@ import type {
 } from "$lib/domain/ports/chat-service.port";
 
 interface HuggingFaceConfig {
-  apiKey: string;
+  apiKey?: string;
   modelId: string;
 }
 
+interface ApiChatResponse {
+  content?: string;
+  error?: string;
+}
+
 export class HuggingFaceAdapter implements ChatServicePort {
-  private client: OpenAI | null = null;
   private apiKey: string;
   private modelId: string;
 
   constructor(config: HuggingFaceConfig) {
-    this.apiKey = config.apiKey;
+    this.apiKey = config.apiKey || "";
     this.modelId = config.modelId;
-    this.initClient();
-  }
-
-  private initClient(): void {
-    if (this.apiKey) {
-      this.client = new OpenAI({
-        baseURL: "https://router.huggingface.co/v1",
-        apiKey: this.apiKey,
-        dangerouslyAllowBrowser: true,
-      });
-    }
   }
 
   setModel(modelId: string): void {
@@ -42,66 +35,124 @@ export class HuggingFaceAdapter implements ChatServicePort {
 
   setApiKey(apiKey: string): void {
     this.apiKey = apiKey;
-    this.initClient();
+  }
+
+  /**
+   * Appelle la route API serveur (mode non-streaming)
+   */
+  private async callApi(
+    messages: Message[],
+    options?: ChatCompletionOptions
+  ): Promise<string> {
+    const formattedMessages = messages.map((m) => ({
+      role: m.role as "user" | "assistant" | "system",
+      content: m.content,
+    }));
+
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: formattedMessages,
+        modelId: this.modelId,
+        temperature: options?.temperature || 0.7,
+        maxTokens: options?.maxTokens || 1024,
+        apiKey: this.apiKey || undefined,
+        stream: false,
+      }),
+    });
+
+    const data: ApiChatResponse = await response.json();
+
+    if (!response.ok || data.error) {
+      throw new Error(
+        data.error || "Erreur lors de la communication avec l'API"
+      );
+    }
+
+    return data.content || "";
   }
 
   async sendMessage(
     messages: Message[],
     options?: ChatCompletionOptions
   ): Promise<string> {
-    if (!this.client || !this.apiKey) {
-      throw new Error("Cle API Hugging Face non configuree");
-    }
-
-    const formattedMessages = messages.map((m) => ({
-      role: m.role as "user" | "assistant" | "system",
-      content: m.content,
-    }));
-
-    const chatCompletion = await this.client.chat.completions.create({
-      model: this.modelId,
-      messages: formattedMessages,
-      max_tokens: options?.maxTokens || 1024,
-      temperature: options?.temperature || 0.7,
-    });
-
-    const content = chatCompletion.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error("Reponse vide de l'API");
-    }
-
-    return content.trim();
+    return this.callApi(messages, options);
   }
 
+  /**
+   * Streaming avec Server-Sent Events (SSE)
+   */
   async streamMessage(
     messages: Message[],
     options?: ChatCompletionOptions,
     onChunk?: (chunk: string) => void
   ): Promise<string> {
-    if (!this.client || !this.apiKey) {
-      throw new Error("Cle API Hugging Face non configuree");
-    }
-
     const formattedMessages = messages.map((m) => ({
       role: m.role as "user" | "assistant" | "system",
       content: m.content,
     }));
 
-    const stream = await this.client.chat.completions.create({
-      model: this.modelId,
-      messages: formattedMessages,
-      max_tokens: options?.maxTokens || 1024,
-      temperature: options?.temperature || 0.7,
-      stream: true,
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: formattedMessages,
+        modelId: this.modelId,
+        temperature: options?.temperature || 0.7,
+        maxTokens: options?.maxTokens || 1024,
+        apiKey: this.apiKey || undefined,
+        stream: true,
+      }),
     });
 
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        errorData.error || "Erreur lors de la communication avec l'API"
+      );
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("Impossible de lire le stream");
+    }
+
+    const decoder = new TextDecoder();
     let fullContent = "";
 
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content;
-      if (content) {
-        fullContent += content;
-        onChunk?.(content);
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const text = decoder.decode(value, { stream: true });
+      const lines = text.split("\n");
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const data = line.slice(6);
+
+          if (data === "[DONE]") {
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.content) {
+              fullContent += parsed.content;
+              onChunk?.(parsed.content);
+            }
+            if (parsed.error) {
+              throw new Error(parsed.error);
+            }
+          } catch {
+            // Ignorer les erreurs de parsing (lignes vides, etc.)
+          }
+        }
       }
     }
 
@@ -109,11 +160,20 @@ export class HuggingFaceAdapter implements ChatServicePort {
   }
 
   async isAvailable(): Promise<boolean> {
-    if (!this.client || !this.apiKey) return false;
-
     try {
-      await this.client.models.list();
-      return true;
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: "test" }],
+          modelId: this.modelId,
+          maxTokens: 1,
+          apiKey: this.apiKey || undefined,
+        }),
+      });
+      return response.ok;
     } catch {
       return false;
     }
