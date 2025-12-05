@@ -126,39 +126,23 @@
         {/each}
       {/if}
     </nav>
+  {/if}
 
-    <div class="sidebar-footer">
-      <div
-        class="user-info"
-        onclick={toggleUserMenu}
-        onkeydown={(e) => e.key === "Enter" && toggleUserMenu()}
-        onfocusout={() => setTimeout(() => (showUserMenu = false), 200)}
-        role="button"
-        tabindex="0"
-      >
-        <div class="avatar">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="8" r="5" />
-            <path d="M20 21a8 8 0 1 0-16 0" />
-          </svg>
-        </div>
-        <span class="username">Utilisateur</span>
+  <div class="sidebar-footer" class:collapsed={isCollapsed}>
+    <div
+      class="user-info"
+      class:collapsed={isCollapsed}
+      onclick={toggleUserMenu}
+      onkeydown={(e) => e.key === "Enter" && toggleUserMenu()}
+      onfocusout={() => setTimeout(() => (showUserMenu = false), 200)}
+      role="button"
+      tabindex="0"
+    >
+      <div class="avatar">
         <svg
-          class="chevron"
-          class:open={showUserMenu}
           xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
+          width="20"
+          height="20"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -166,101 +150,105 @@
           stroke-linecap="round"
           stroke-linejoin="round"
         >
-          <path d="m6 9 6 6 6-6" />
+          <circle cx="12" cy="8" r="5" />
+          <path d="M20 21a8 8 0 1 0-16 0" />
         </svg>
-
-        {#if showUserMenu}
-          <div class="user-menu">
-            <button class="menu-item" onclick={() => themeStore.toggle()}>
-              {#if $themeStore.isDark}
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <circle cx="12" cy="12" r="4" />
-                  <path d="M12 2v2" />
-                  <path d="M12 20v2" />
-                  <path d="m4.93 4.93 1.41 1.41" />
-                  <path d="m17.66 17.66 1.41 1.41" />
-                  <path d="M2 12h2" />
-                  <path d="M20 12h2" />
-                  <path d="m6.34 17.66-1.41 1.41" />
-                  <path d="m19.07 4.93-1.41 1.41" />
-                </svg>
-                <span>Mode clair</span>
-              {:else}
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-                </svg>
-                <span>Mode sombre</span>
-              {/if}
-            </button>
-
-            <button class="menu-item" onclick={() => (showUserMenu = false)}>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path
-                  d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
-                />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-              <span>Parametres</span>
-            </button>
-
-            <div class="menu-divider"></div>
-
-            <button
-              class="menu-item danger"
-              onclick={handleClearAllConversations}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M3 6h18" />
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-              </svg>
-              <span>Effacer les conversations</span>
-            </button>
-          </div>
-        {/if}
       </div>
+      {#if !isCollapsed}
+        <span class="username">Utilisateur</span>
+      {/if}
+
+      {#if showUserMenu}
+        <div class="user-menu" class:collapsed={isCollapsed}>
+          <button class="menu-item" onclick={() => themeStore.toggle()}>
+            {#if $themeStore.isDark}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2" />
+                <path d="M12 20v2" />
+                <path d="m4.93 4.93 1.41 1.41" />
+                <path d="m17.66 17.66 1.41 1.41" />
+                <path d="M2 12h2" />
+                <path d="M20 12h2" />
+                <path d="m6.34 17.66-1.41 1.41" />
+                <path d="m19.07 4.93-1.41 1.41" />
+              </svg>
+              <span>Mode clair</span>
+            {:else}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+              </svg>
+              <span>Mode sombre</span>
+            {/if}
+          </button>
+
+          <button class="menu-item" onclick={() => (showUserMenu = false)}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+              />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            <span>Parametres</span>
+          </button>
+
+          <div class="menu-divider"></div>
+
+          <button
+            class="menu-item danger"
+            onclick={handleClearAllConversations}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M3 6h18" />
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+            </svg>
+            <span>Effacer les conversations</span>
+          </button>
+        </div>
+      {/if}
     </div>
-  {/if}
+  </div>
 </aside>
 
 <style>
@@ -403,8 +391,13 @@
   }
 
   .sidebar-footer {
+    margin-top: auto;
     padding: 16px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .sidebar-footer.collapsed {
+    padding: 12px 8px;
   }
 
   .user-info {
@@ -416,6 +409,11 @@
     border-radius: 10px;
     transition: background 0.2s ease;
     cursor: pointer;
+  }
+
+  .user-info.collapsed {
+    justify-content: center;
+    padding: 0px;
   }
 
   .user-info:hover {
@@ -431,6 +429,14 @@
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 10px;
     color: white;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+  }
+
+  .user-info.collapsed .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
   }
 
   .username {
@@ -438,16 +444,6 @@
     font-size: 14px;
     font-weight: 500;
     flex: 1;
-  }
-
-  .chevron {
-    color: #6b7280;
-    transition: transform 0.2s ease;
-    flex-shrink: 0;
-  }
-
-  .chevron.open {
-    transform: rotate(180deg);
   }
 
   .user-menu {
@@ -461,6 +457,26 @@
     border-radius: 12px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
     animation: slideUp 0.2s ease;
+  }
+
+  .user-menu.collapsed {
+    left: calc(100% + 8px);
+    right: auto;
+    bottom: 0;
+    width: max-content;
+    min-width: 200px;
+    animation: slideRight 0.2s ease;
+  }
+
+  @keyframes slideRight {
+    from {
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
   }
 
   @keyframes slideUp {
