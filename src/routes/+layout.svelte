@@ -2,12 +2,13 @@
   import "../app.css";
 
   import { onMount } from "svelte";
-  import { chatStore, themeStore } from "$lib/stores";
+  import { chatStore, themeStore, settingsStore } from "$lib/stores";
 
   let { children } = $props();
 
   onMount(() => {
     themeStore.init();
+    settingsStore.init();
     chatStore.init();
   });
 </script>

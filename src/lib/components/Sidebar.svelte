@@ -5,6 +5,7 @@
   import { chatStore, currentConversation, themeStore } from "$lib/stores";
   import ConversationItem from "./ConversationItem.svelte";
   import IconButton from "./ui/IconButton.svelte";
+  import { goto } from "$app/navigation";
 
   let isCollapsed = $state(false);
   let searchQuery = $state("");
@@ -202,7 +203,13 @@
             {/if}
           </button>
 
-          <button class="menu-item" onclick={() => (showUserMenu = false)}>
+          <button
+            class="menu-item"
+            onclick={() => {
+              showUserMenu = false;
+              goto("/settings");
+            }}
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"

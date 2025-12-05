@@ -6,6 +6,7 @@
   import MessageBubble from "./MessageBubble.svelte";
   import ChatInput from "./ChatInput.svelte";
   import WelcomeScreen from "./WelcomeScreen.svelte";
+  import ModelSelector from "./ModelSelector.svelte";
 
   let messagesContainer: HTMLDivElement;
 
@@ -23,12 +24,15 @@
     <WelcomeScreen />
   {:else}
     <div class="chat-header">
-      <h1 class="chat-title">{$currentConversation.title}</h1>
-      <span class="message-count">
-        {$currentMessages.length} message{$currentMessages.length > 1
-          ? "s"
-          : ""}
-      </span>
+      <div class="header-left">
+        <h1 class="chat-title">{$currentConversation.title}</h1>
+        <span class="message-count">
+          {$currentMessages.length} message{$currentMessages.length > 1
+            ? "s"
+            : ""}
+        </span>
+      </div>
+      <ModelSelector />
     </div>
 
     <div class="messages-container" bind:this={messagesContainer}>
@@ -93,20 +97,28 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px 32px;
+    gap: 16px;
+    padding: 16px 24px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     background: rgba(0, 0, 0, 0.2);
   }
 
+  .header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
+
   .chat-title {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
     color: white;
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 70%;
   }
 
   .message-count {

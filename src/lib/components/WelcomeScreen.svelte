@@ -3,6 +3,7 @@
    * Composant WelcomeScreen - Ecran d'accueil
    */
   import { chatStore } from "$lib/stores";
+  import ModelSelector from "./ModelSelector.svelte";
 
   const suggestions = [
     {
@@ -64,6 +65,10 @@
     <p class="subtitle">
       Votre assistant IA intelligent. Posez-moi n'importe quelle question!
     </p>
+
+    <div class="model-selector-wrapper">
+      <ModelSelector />
+    </div>
 
     <div class="suggestions-grid">
       {#each suggestions as suggestion}
@@ -201,7 +206,13 @@
   .subtitle {
     font-size: 18px;
     color: #9ca3af;
-    margin: 0 0 48px;
+    margin: 0 0 32px;
+  }
+
+  .model-selector-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 48px;
   }
 
   .suggestions-grid {

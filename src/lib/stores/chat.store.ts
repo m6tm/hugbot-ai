@@ -5,9 +5,13 @@
 import { writable, derived, get } from "svelte/store";
 import type { Conversation } from "$lib/domain/entities/conversation";
 import type { Message } from "$lib/domain/entities/message";
+import type { ChatServicePort } from "$lib/domain/ports/chat-service.port";
 import { ChatUseCase } from "$lib/application/use-cases/chat.use-case";
 import { LocalStorageAdapter } from "$lib/infrastructure/adapters/local-storage.adapter";
 import { MockChatAdapter } from "$lib/infrastructure/adapters/mock-chat.adapter";
+import { HuggingFaceAdapter } from "$lib/infrastructure/adapters/huggingface.adapter";
+import { settingsStore } from "./settings.store";
+import { getModelById } from "$lib/config/models";
 
 interface ChatState {
   conversations: Conversation[];
@@ -31,8 +35,38 @@ function createChatStore() {
   const { subscribe, set, update } = writable<ChatState>(initialState);
 
   const storage = new LocalStorageAdapter();
-  const chatService = new MockChatAdapter();
-  const chatUseCase = new ChatUseCase(storage, chatService);
+  const mockAdapter = new MockChatAdapter();
+  const huggingFaceAdapter = new HuggingFaceAdapter({
+    apiKey: "",
+    modelId: "",
+  });
+
+  /**
+   * Recupere le bon adaptateur selon les parametres
+   */
+  function getChatService(): ChatServicePort {
+    const settings = get(settingsStore);
+    const model = getModelById(settings.currentModelId);
+
+    if (!model || model.provider === "mock") {
+      return mockAdapter;
+    }
+
+    if (model.provider === "huggingface") {
+      huggingFaceAdapter.setApiKey(settings.apiKey);
+      huggingFaceAdapter.setModel(model.modelId);
+      return huggingFaceAdapter;
+    }
+
+    return mockAdapter;
+  }
+
+  /**
+   * Cree un ChatUseCase avec le bon service
+   */
+  function createUseCase(): ChatUseCase {
+    return new ChatUseCase(storage, getChatService());
+  }
 
   return {
     subscribe,
@@ -43,6 +77,7 @@ function createChatStore() {
     async init() {
       update((state) => ({ ...state, isLoading: true }));
       try {
+        const chatUseCase = createUseCase();
         const conversations = await chatUseCase.getConversations();
         update((state) => ({
           ...state,
@@ -63,6 +98,7 @@ function createChatStore() {
      */
     async createConversation() {
       try {
+        const chatUseCase = createUseCase();
         const conversation = await chatUseCase.createNewConversation();
         update((state) => ({
           ...state,
@@ -94,6 +130,7 @@ function createChatStore() {
      */
     async deleteConversation(id: string) {
       try {
+        const chatUseCase = createUseCase();
         await chatUseCase.deleteConversation(id);
         update((state) => {
           const newConversations = state.conversations.filter(
@@ -117,7 +154,7 @@ function createChatStore() {
     },
 
     /**
-     * Envoie un message
+     * Envoie un message (utilise le modele actuellement selectionne)
      */
     async sendMessage(content: string) {
       const state = get({ subscribe });
@@ -129,6 +166,7 @@ function createChatStore() {
 
       const currentState = get({ subscribe });
       const conversationId = currentState.currentConversationId!;
+      const settings = get(settingsStore);
 
       update((s) => ({
         ...s,
@@ -137,10 +175,15 @@ function createChatStore() {
       }));
 
       try {
+        const chatUseCase = createUseCase();
         const { userMessage, assistantMessage } = await chatUseCase.sendMessage(
           conversationId,
           content,
-          { stream: true },
+          {
+            stream: true,
+            temperature: settings.temperature,
+            maxTokens: settings.maxTokens,
+          },
           (chunk) => {
             update((s) => ({
               ...s,
@@ -164,7 +207,7 @@ function createChatStore() {
                 ],
                 title:
                   conv.messages.length === 0
-                    ? assistantMessage.content.substring(0, 40)
+                    ? content.substring(0, 40)
                     : conv.title,
                 updatedAt: new Date(),
               };
@@ -194,6 +237,7 @@ function createChatStore() {
      */
     async renameConversation(id: string, newTitle: string) {
       try {
+        const chatUseCase = createUseCase();
         await chatUseCase.renameConversation(id, newTitle);
         update((state) => ({
           ...state,

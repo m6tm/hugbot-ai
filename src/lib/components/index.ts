@@ -6,3 +6,4 @@ export { default as ConversationItem } from "./ConversationItem.svelte";
 export { default as WelcomeScreen } from "./WelcomeScreen.svelte";
 export { default as IconButton } from "./ui/IconButton.svelte";
 export { default as ConfirmModal } from "./ui/ConfirmModal.svelte";
+export { default as ModelSelector } from "./ModelSelector.svelte";
