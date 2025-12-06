@@ -4,6 +4,7 @@
    */
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
+  import CodeBlock from "$lib/components/CodeBlock.svelte";
 
   let copiedIndex: number | null = $state(null);
   let baseUrl = $state("");
@@ -164,52 +165,10 @@
         Hugging Face dans l'en-tete <code>Authorization</code>.
       </p>
 
-      <div class="code-block">
-        <div class="code-header">
-          <span class="code-lang">HTTP Header</span>
-          <button
-            class="copy-btn"
-            onclick={() =>
-              copyToClipboard("Authorization: Bearer hf_xxxxxxxxxx", 0)}
-          >
-            {#if copiedIndex === 0}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              Copie !
-            {:else}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                <path
-                  d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
-                />
-              </svg>
-              Copier
-            {/if}
-          </button>
-        </div>
-        <pre><code>Authorization: Bearer hf_xxxxxxxxxx</code></pre>
-      </div>
+      <CodeBlock
+        language="HTTP Header"
+        code="Authorization: Bearer hf_xxxxxxxxxx"
+      />
 
       <p class="note">
         Obtenez votre cle API gratuite sur <a
@@ -288,14 +247,9 @@
       </div>
 
       <h3>Exemple avec SDK OpenAI (Node.js)</h3>
-      <div class="code-block">
-        <div class="code-header">
-          <span class="code-lang">TypeScript</span>
-          <button
-            class="copy-btn"
-            onclick={() =>
-              copyToClipboard(
-                `import OpenAI from "openai";
+      <CodeBlock
+        language="typescript"
+        code={`import OpenAI from "openai";
 
 const client = new OpenAI({
   baseURL: "${baseUrl}/api/v1",
@@ -313,89 +267,13 @@ const response = await client.chat.completions.create({
   max_tokens: 1024,
 });
 
-console.log(response.choices[0].message.content);`,
-                1
-              )}
-          >
-            {#if copiedIndex === 1}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              Copie !
-            {:else}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                <path
-                  d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
-                />
-              </svg>
-              Copier
-            {/if}
-          </button>
-        </div>
-        <pre><code
-            ><span class="keyword">import</span> OpenAI <span class="keyword"
-              >from</span
-            > <span class="string">"openai"</span>;
-
-<span class="keyword">const</span> client = <span class="keyword">new</span
-            > <span class="class">OpenAI</span>(&#123;
-  baseURL: <span class="string">"{baseUrl}/api/v1"</span>,
-  apiKey: <span class="string">"hf_xxxxxxxxxx"</span>,
-&#125;);
-
-<span class="comment">// Mode standard</span>
-<span class="keyword">const</span> response = <span class="keyword">await</span
-            > client.chat.completions.<span class="function">create</span
-            >(&#123;
-  model: <span class="string">"deepseek-ai/DeepSeek-V3.2"</span>,
-  messages: [
-    &#123; role: <span class="string">"system"</span>, content: <span
-              class="string">"Tu es un assistant helpful."</span
-            > &#125;,
-    &#123; role: <span class="string">"user"</span>, content: <span
-              class="string">"Bonjour !"</span
-            > &#125;
-  ],
-  temperature: <span class="number">0.7</span>,
-  max_tokens: <span class="number">1024</span>,
-&#125;);
-
-console.<span class="function">log</span>(response.choices[<span class="number"
-              >0</span
-            >].message.content);</code
-          ></pre>
-      </div>
+console.log(response.choices[0].message.content);`}
+      />
 
       <h3>Exemple avec streaming</h3>
-      <div class="code-block">
-        <div class="code-header">
-          <span class="code-lang">TypeScript</span>
-          <button
-            class="copy-btn"
-            onclick={() =>
-              copyToClipboard(
-                `import OpenAI from "openai";
+      <CodeBlock
+        language="typescript"
+        code={`import OpenAI from "openai";
 
 const client = new OpenAI({
   baseURL: "${baseUrl}/api/v1",
@@ -411,86 +289,13 @@ const stream = await client.chat.completions.create({
 for await (const chunk of stream) {
   const content = chunk.choices[0]?.delta?.content || "";
   process.stdout.write(content);
-}`,
-                2
-              )}
-          >
-            {#if copiedIndex === 2}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              Copie !
-            {:else}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                <path
-                  d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
-                />
-              </svg>
-              Copier
-            {/if}
-          </button>
-        </div>
-        <pre><code
-            ><span class="keyword">import</span> OpenAI <span class="keyword"
-              >from</span
-            > <span class="string">"openai"</span>;
-
-<span class="keyword">const</span> client = <span class="keyword">new</span
-            > <span class="class">OpenAI</span>(&#123;
-  baseURL: <span class="string">"{baseUrl}/api/v1"</span>,
-  apiKey: <span class="string">"hf_xxxxxxxxxx"</span>,
-&#125;);
-
-<span class="keyword">const</span> stream = <span class="keyword">await</span
-            > client.chat.completions.<span class="function">create</span
-            >(&#123;
-  model: <span class="string">"deepseek-ai/DeepSeek-V3.2"</span>,
-  messages: [&#123; role: <span class="string">"user"</span>, content: <span
-              class="string">"Raconte une histoire"</span
-            > &#125;],
-  stream: <span class="boolean">true</span>,
-&#125;);
-
-<span class="keyword">for await</span> (<span class="keyword">const</span
-            > chunk <span class="keyword">of</span> stream) &#123;
-  <span class="keyword">const</span> content = chunk.choices[<span
-              class="number">0</span
-            >]?.delta?.content || <span class="string">""</span>;
-  process.stdout.<span class="function">write</span>(content);
-&#125;</code
-          ></pre>
-      </div>
+}`}
+      />
 
       <h3>Exemple avec cURL</h3>
-      <div class="code-block">
-        <div class="code-header">
-          <span class="code-lang">Bash</span>
-          <button
-            class="copy-btn"
-            onclick={() =>
-              copyToClipboard(
-                `curl -X POST "${baseUrl}/api/v1/chat/completions" \\
+      <CodeBlock
+        language="bash"
+        code={`curl -X POST "${baseUrl}/api/v1/chat/completions" \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer hf_xxxxxxxxxx" \\
   -d '{
@@ -498,105 +303,34 @@ for await (const chunk of stream) {
     "messages": [{"role": "user", "content": "Bonjour !"}],
     "temperature": 0.7,
     "max_tokens": 1024
-  }'`,
-                3
-              )}
-          >
-            {#if copiedIndex === 3}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              Copie !
-            {:else}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                <path
-                  d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
-                />
-              </svg>
-              Copier
-            {/if}
-          </button>
-        </div>
-        <pre><code
-            >curl -X POST <span class="string"
-              >"{baseUrl}/api/v1/chat/completions"</span
-            > \
-  -H <span class="string">"Content-Type: application/json"</span> \
-  -H <span class="string">"Authorization: Bearer hf_xxxxxxxxxx"</span> \
-  -d <span class="string"
-              >'&#123;
-    "model": "deepseek-ai/DeepSeek-V3.2",
-    "messages": [&#123;"role": "user", "content": "Bonjour !"&#125;],
-    "temperature": 0.7,
-    "max_tokens": 1024
-  &#125;'</span
-            ></code
-          ></pre>
-      </div>
+  }'`}
+      />
 
       <h3>Format de reponse</h3>
-      <div class="code-block">
-        <div class="code-header">
-          <span class="code-lang">JSON</span>
-        </div>
-        <pre><code
-            >&#123;
-  <span class="string">"id"</span>: <span class="string">"chatcmpl-abc123"</span
-            >,
-  <span class="string">"object"</span>: <span class="string"
-              >"chat.completion"</span
-            >,
-  <span class="string">"created"</span>: <span class="number">1701234567</span>,
-  <span class="string">"model"</span>: <span class="string"
-              >"deepseek-ai/DeepSeek-V3.2"</span
-            >,
-  <span class="string">"choices"</span>: [
-    &#123;
-      <span class="string">"index"</span>: <span class="number">0</span>,
-      <span class="string">"message"</span>: &#123;
-        <span class="string">"role"</span>: <span class="string"
-              >"assistant"</span
-            >,
-        <span class="string">"content"</span>: <span class="string"
-              >"Bonjour ! Comment puis-je vous aider ?"</span
-            >
-      &#125;,
-      <span class="string">"finish_reason"</span>: <span class="string"
-              >"stop"</span
-            >
-    &#125;
+      <CodeBlock
+        language="json"
+        code={`{
+  "id": "chatcmpl-abc123",
+  "object": "chat.completion",
+  "created": 1701234567,
+  "model": "deepseek-ai/DeepSeek-V3.2",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Bonjour ! Comment puis-je vous aider ?"
+      },
+      "finish_reason": "stop"
+    }
   ],
-  <span class="string">"usage"</span>: &#123;
-    <span class="string">"prompt_tokens"</span>: <span class="number">10</span>,
-    <span class="string">"completion_tokens"</span>: <span class="number"
-              >15</span
-            >,
-    <span class="string">"total_tokens"</span>: <span class="number">25</span>
-  &#125;
-&#125;</code
-          ></pre>
-      </div>
+  "usage": {
+    "prompt_tokens": 10,
+    "completion_tokens": 15,
+    "total_tokens": 25
+  }
+}`}
+      />
     </section>
 
     <!-- Modeles -->
@@ -820,88 +554,6 @@ for await (const chunk of stream) {
   :global(:not(.dark)) .base-url {
     background: rgba(255, 255, 255, 0.5);
     color: #4f46e5;
-  }
-
-  .code-block {
-    background: #0d1117;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    overflow: hidden;
-    margin: 16px 0;
-  }
-
-  :global(:not(.dark)) .code-block {
-    border: 1px solid #e2e8f0;
-  }
-
-  .code-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.05);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .code-lang {
-    color: #9ca3af;
-    font-size: 13px;
-    font-weight: 500;
-  }
-
-  .copy-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    background: rgba(255, 255, 255, 0.1);
-    border: none;
-    border-radius: 6px;
-    color: #cbd5e1;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .copy-btn:hover {
-    background: rgba(102, 126, 234, 0.2);
-    color: #a5b4fc;
-  }
-
-  .code-block pre {
-    margin: 0;
-    padding: 20px;
-    overflow-x: auto;
-  }
-
-  .code-block pre code {
-    background: transparent;
-    padding: 0;
-    color: #e2e8f0;
-    font-size: 14px;
-    line-height: 1.6;
-  }
-
-  .code-block .keyword {
-    color: #ff79c6;
-  }
-  .code-block .string {
-    color: #f1fa8c;
-  }
-  .code-block .number {
-    color: #bd93f9;
-  }
-  .code-block .boolean {
-    color: #bd93f9;
-  }
-  .code-block .function {
-    color: #50fa7b;
-  }
-  .code-block .class {
-    color: #8be9fd;
-  }
-  .code-block .comment {
-    color: #6272a4;
   }
 
   .note {

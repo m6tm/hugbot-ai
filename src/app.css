@@ -139,6 +139,169 @@ button {
   }
 }
 
+/* --- Code Block Utilities & Themes --- */
+
+/* Themes de coloration syntaxique */
+.tokyo-night {
+  --code-bg: #1a1b26;
+  --code-text: #a9b1d6;
+  --code-comment: #565f89;
+  --code-keyword: #bb9af7;
+  --code-string: #9ece6a;
+  --code-number: #ff9e64;
+  --code-function: #7aa2f7;
+  --code-class: #2ac3de;
+  --code-tag: #f7768e;
+}
+
+.github-dark {
+  --code-bg: #0d1117;
+  --code-text: #c9d1d9;
+  --code-comment: #8b949e;
+  --code-keyword: #ff7b72;
+  --code-string: #a5d6ff;
+  --code-number: #79c0ff;
+  --code-function: #d2a8ff;
+  --code-class: #f0883e;
+  --code-tag: #7ee787;
+}
+
+.dracula {
+  --code-bg: #282a36;
+  --code-text: #f8f8f2;
+  --code-comment: #6272a4;
+  --code-keyword: #ff79c6;
+  --code-string: #f1fa8c;
+  --code-number: #bd93f9;
+  --code-function: #50fa7b;
+  --code-class: #8be9fd;
+  --code-tag: #ffb86c;
+}
+
+/* Styles des blocs de code */
+.code-block {
+  margin: 1em 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--code-bg, #1a1b26);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-family: "Fira Code", "JetBrains Mono", monospace;
+}
+
+.code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Increased specificity for code block header elements */
+.code-block .code-language {
+  font-size: 12px;
+  font-weight: 600;
+  color: #a5b4fc !important; /* Lighter indigo for better contrast */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.code-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.code-block .copy-code-btn,
+.code-block .theme-switch-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #cbd5e1 !important; /* Light slate for better contrast */
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.code-block .theme-switch-btn {
+  padding: 4px 8px;
+}
+
+.code-block .copy-code-btn:hover,
+.code-block .theme-switch-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white !important;
+}
+
+.code-block pre {
+  margin: 0;
+  padding: 16px;
+  overflow-x: auto;
+  background: transparent;
+  border: none;
+}
+
+.code-block code {
+  background: transparent;
+  padding: 0;
+  font-size: 0.85em;
+  line-height: 1.6;
+  color: var(--code-text, #e5e7eb);
+}
+
+/* Highlight.js Mappings */
+.hljs-comment,
+.hljs-quote {
+  color: var(--code-comment);
+  font-style: italic;
+}
+.hljs-keyword,
+.hljs-selector-tag {
+  color: var(--code-keyword);
+}
+.hljs-string,
+.hljs-template-variable,
+.hljs-addition {
+  color: var(--code-string);
+}
+.hljs-number,
+.hljs-literal {
+  color: var(--code-number);
+}
+.hljs-function,
+.hljs-title,
+.hljs-section {
+  color: var(--code-function);
+}
+.hljs-built_in {
+  color: var(--code-function);
+}
+.hljs-class .hljs-title,
+.hljs-type {
+  color: var(--code-class);
+}
+.hljs-variable {
+  color: var(--code-text);
+}
+.hljs-tag,
+.hljs-name,
+.hljs-attribute {
+  color: var(--code-tag);
+}
+.hljs-attr {
+  color: var(--code-function);
+}
+.hljs-property {
+  color: var(--code-class);
+}
+.hljs-punctuation {
+  color: var(--code-text);
+}
+
 .animate-fade-in {
   animation: fadeIn 0.3s ease forwards;
 }

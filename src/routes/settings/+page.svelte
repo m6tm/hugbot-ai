@@ -486,6 +486,7 @@
     border-radius: 3px;
     outline: none;
     -webkit-appearance: none;
+    appearance: none;
   }
 
   .range-input::-webkit-slider-thumb {
