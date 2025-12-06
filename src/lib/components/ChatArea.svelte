@@ -8,12 +8,14 @@
   import WelcomeScreen from "./WelcomeScreen.svelte";
   import ModelSelector from "./ModelSelector.svelte";
 
-  let messagesContainer: HTMLDivElement;
+  let messagesContainer = $state<HTMLDivElement>();
 
   $effect(() => {
     if ($currentMessages.length > 0 && messagesContainer) {
       setTimeout(() => {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
       }, 100);
     }
   });
@@ -91,7 +93,7 @@
     flex-direction: column;
     flex: 1;
     height: 100%;
-    background: linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 100%);
+    background: var(--bg-chat);
     overflow: hidden;
   }
 
@@ -101,8 +103,9 @@
     justify-content: space-between;
     gap: 16px;
     padding: 16px 24px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid var(--sidebar-border);
+    background: var(--bg-header);
+    backdrop-filter: blur(10px);
   }
 
   .header-left {
@@ -120,7 +123,7 @@
   .chat-title {
     font-size: 16px;
     font-weight: 600;
-    color: white;
+    color: var(--text-main);
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
@@ -129,8 +132,8 @@
 
   .message-count {
     font-size: 13px;
-    color: #6b7280;
-    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    background: var(--bg-input);
     padding: 6px 12px;
     border-radius: 20px;
     display: inline-block;
@@ -158,7 +161,7 @@
     overflow-y: auto;
     padding: 24px;
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 
   .messages-container::-webkit-scrollbar {
@@ -170,7 +173,7 @@
   }
 
   .messages-container::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--scrollbar-thumb);
     border-radius: 3px;
   }
 
@@ -188,7 +191,7 @@
     align-items: center;
     justify-content: center;
     height: 100%;
-    color: #6b7280;
+    color: var(--text-muted);
     text-align: center;
   }
 
@@ -198,10 +201,10 @@
     justify-content: center;
     width: 80px;
     height: 80px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-input);
     border-radius: 20px;
     margin-bottom: 16px;
-    color: #667eea;
+    color: var(--color-primary);
   }
 
   .empty-chat p {

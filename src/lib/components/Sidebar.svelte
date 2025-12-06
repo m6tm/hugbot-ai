@@ -383,8 +383,8 @@
     flex-direction: column;
     width: 280px;
     height: 100%;
-    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--sidebar-border);
     transition: width 0.3s ease;
   }
 
@@ -410,7 +410,11 @@
     align-items: center;
     gap: 10px;
     padding: 12px 16px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(
+      135deg,
+      var(--color-primary) 0%,
+      var(--color-accent) 100%
+    );
     border: none;
     border-radius: 12px;
     color: white;
@@ -431,7 +435,11 @@
     justify-content: center;
     width: 44px;
     height: 44px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(
+      135deg,
+      var(--color-primary) 0%,
+      var(--color-accent) 100%
+    );
     border: none;
     border-radius: 12px;
     color: white;
@@ -453,29 +461,29 @@
     position: absolute;
     left: 28px;
     top: 12px;
-    color: #6b7280;
+    color: var(--text-dim);
     pointer-events: none;
   }
 
   .search-input {
     width: 100%;
     padding: 12px 12px 12px 42px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
     border-radius: 10px;
-    color: white;
+    color: var(--text-main);
     font-size: 14px;
     outline: none;
     transition: all 0.2s ease;
   }
 
   .search-input::placeholder {
-    color: #6b7280;
+    color: var(--text-dim);
   }
 
   .search-input:focus {
-    border-color: #667eea;
-    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--color-primary);
+    background: var(--bg-card);
   }
 
   .conversations-list {
@@ -483,7 +491,7 @@
     overflow-y: auto;
     padding: 0 8px;
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 
   .conversations-list::-webkit-scrollbar {
@@ -495,7 +503,7 @@
   }
 
   .conversations-list::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--scrollbar-thumb);
     border-radius: 3px;
   }
 
@@ -506,19 +514,19 @@
     justify-content: center;
     padding: 32px 16px;
     text-align: center;
-    color: #9ca3af;
+    color: var(--text-muted);
   }
 
   .empty-state .hint {
     font-size: 13px;
-    color: #6b7280;
+    color: var(--text-dim);
     margin-top: 4px;
   }
 
   .sidebar-footer {
     margin-top: auto;
     padding: 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid var(--sidebar-border);
   }
 
   .sidebar-footer.collapsed {
@@ -542,7 +550,7 @@
   }
 
   .user-info:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-hover);
   }
 
   .avatar {
@@ -551,7 +559,11 @@
     justify-content: center;
     width: 36px;
     height: 36px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(
+      135deg,
+      var(--color-primary) 0%,
+      var(--color-accent) 100%
+    );
     border-radius: 10px;
     color: white;
     flex-shrink: 0;
@@ -565,7 +577,7 @@
   }
 
   .username {
-    color: #e5e7eb;
+    color: var(--text-secondary);
     font-size: 14px;
     font-weight: 500;
     flex: 1;
@@ -577,8 +589,8 @@
     left: 0;
     right: 0;
     padding: 8px;
-    background: #2a2a40;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
     animation: slideUp 0.2s ease;
@@ -624,7 +636,7 @@
     background: transparent;
     border: none;
     border-radius: 8px;
-    color: #e5e7eb;
+    color: var(--text-secondary);
     font-size: 13px;
     cursor: pointer;
     transition: background 0.2s ease;
@@ -632,7 +644,7 @@
   }
 
   .user-menu .menu-item:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--bg-hover);
   }
 
   .user-menu .menu-item.danger {
@@ -645,7 +657,7 @@
 
   .menu-divider {
     height: 1px;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--border-color);
     margin: 8px 0;
   }
 
@@ -660,17 +672,22 @@
     justify-content: center;
     width: 48px;
     height: 48px;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: var(--bg-sidebar);
+    border: 1px solid var(--sidebar-border);
     border-radius: 12px;
-    color: white;
+    color: var(--text-main);
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   }
 
   .mobile-toggle-btn:hover {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(
+      135deg,
+      var(--color-primary) 0%,
+      var(--color-accent) 100%
+    );
+    color: white;
     transform: scale(1.05);
   }
 

@@ -221,7 +221,11 @@
   }
 
   .user .avatar {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(
+      135deg,
+      var(--color-primary) 0%,
+      var(--color-accent) 100%
+    );
     color: white;
   }
 
@@ -286,12 +290,12 @@
   .role {
     font-size: 13px;
     font-weight: 600;
-    color: #e5e7eb;
+    color: var(--text-main);
   }
 
   .time {
     font-size: 11px;
-    color: #6b7280;
+    color: var(--text-dim);
   }
 
   .content {
@@ -301,15 +305,19 @@
   }
 
   .user .content {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(
+      135deg,
+      var(--color-primary) 0%,
+      var(--color-accent) 100%
+    );
     color: white;
     border-bottom-right-radius: 4px;
   }
 
   .assistant .content {
-    background: rgba(255, 255, 255, 0.05);
-    color: #e5e7eb;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-input);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
     border-bottom-left-radius: 4px;
   }
 
@@ -329,7 +337,7 @@
   .dot {
     width: 6px;
     height: 6px;
-    background: #667eea;
+    background: var(--color-primary);
     border-radius: 50%;
     animation: bounce 1.4s ease-in-out infinite;
   }
@@ -374,18 +382,18 @@
     align-items: center;
     gap: 6px;
     padding: 6px 12px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
-    color: #9ca3af;
+    color: var(--text-muted);
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
   }
 
   .action-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+    background: var(--bg-hover);
+    color: var(--text-main);
   }
 
   /* Styles pour le contenu Markdown */
@@ -402,18 +410,18 @@
     margin-top: 1em;
     margin-bottom: 0.5em;
     font-weight: 600;
-    color: #f3f4f6;
+    color: var(--text-main);
   }
 
   .markdown-content :global(h1) {
     font-size: 1.5em;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 0.3em;
   }
 
   .markdown-content :global(h2) {
     font-size: 1.3em;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 0.3em;
   }
 
@@ -448,17 +456,17 @@
   }
 
   .markdown-content :global(li::marker) {
-    color: #667eea;
+    color: var(--color-primary);
   }
 
   .markdown-content :global(strong) {
     font-weight: 600;
-    color: #f9fafb;
+    color: var(--text-main);
   }
 
   .markdown-content :global(em) {
     font-style: italic;
-    color: #d1d5db;
+    color: var(--text-secondary);
   }
 
   .markdown-content :global(code) {
@@ -471,6 +479,7 @@
   }
 
   /* Styles pour les blocs de code avec highlight.js */
+  /* Note: On garde le theme sombre pour les blocs de code meme en mode light */
   .markdown-content :global(.code-block) {
     margin: 1em 0;
     border-radius: 10px;
@@ -532,7 +541,7 @@
     color: #e5e7eb;
   }
 
-  /* Styles highlight.js - Theme Tokyo Night */
+  /* Styles highlight.js - Theme Tokyo Night (Conserved hardcoded colors) */
   .markdown-content :global(.hljs-comment),
   .markdown-content :global(.hljs-quote) {
     color: #565f89;
@@ -642,12 +651,12 @@
   }
 
   .markdown-content :global(blockquote) {
-    border-left: 3px solid #667eea;
+    border-left: 3px solid var(--color-primary);
     margin: 1em 0;
     padding: 0.5em 1em;
     background: rgba(102, 126, 234, 0.1);
     border-radius: 0 8px 8px 0;
-    color: #d1d5db;
+    color: var(--text-secondary);
   }
 
   .markdown-content :global(blockquote p) {
@@ -667,7 +676,7 @@
 
   .markdown-content :global(hr) {
     border: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid var(--border-color);
     margin: 1.5em 0;
   }
 
@@ -679,7 +688,7 @@
 
   .markdown-content :global(th),
   .markdown-content :global(td) {
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
     padding: 0.5em 0.8em;
     text-align: left;
   }

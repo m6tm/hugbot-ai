@@ -72,11 +72,7 @@
 <style>
   .chat-input-container {
     padding: 16px 24px 24px;
-    background: linear-gradient(
-      180deg,
-      transparent 0%,
-      rgba(0, 0, 0, 0.3) 100%
-    );
+    background: transparent;
   }
 
   .input-wrapper {
@@ -86,15 +82,15 @@
     max-width: 900px;
     margin: 0 auto;
     padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
     border-radius: 16px;
     transition: all 0.2s ease;
   }
 
   .input-wrapper:focus-within {
-    border-color: #667eea;
-    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--color-primary);
+    background: var(--bg-card);
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
   }
 
@@ -105,7 +101,7 @@
     padding: 8px 0;
     background: transparent;
     border: none;
-    color: white;
+    color: var(--text-main);
     font-size: 15px;
     line-height: 1.5;
     resize: none;
@@ -114,7 +110,7 @@
   }
 
   textarea::placeholder {
-    color: #6b7280;
+    color: var(--text-dim);
   }
 
   textarea:disabled {
@@ -132,7 +128,7 @@
   .disclaimer {
     text-align: center;
     font-size: 12px;
-    color: #6b7280;
+    color: var(--text-muted);
     margin: 12px 0 0;
   }
 </style>

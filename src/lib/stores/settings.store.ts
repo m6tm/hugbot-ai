@@ -47,11 +47,15 @@ async function loadSettings(): Promise<SettingsState> {
         isApiKeyConfigured: !!stored.apiKey,
       };
     }
-  } catch {
-    // Ignore
-  }
 
-  return getDefaultSettings();
+    // Si les parametres n'existent pas, on initialise avec les valeurs par defaut
+    const defaults = getDefaultSettings();
+    await saveSettings(defaults);
+    return defaults;
+  } catch (error) {
+    console.error("Erreur lors du chargement des parametres:", error);
+    return getDefaultSettings();
+  }
 }
 
 async function saveSettings(state: SettingsState): Promise<void> {

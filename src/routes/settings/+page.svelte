@@ -221,8 +221,11 @@
     flex: 1;
     padding: 40px;
     overflow-y: auto;
-    background: #0f172a;
-    color: #e2e8f0;
+    background: var(--bg-main);
+    color: var(--text-secondary);
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
   }
 
   .settings-header {
@@ -235,15 +238,26 @@
   h1 {
     font-size: 32px;
     font-weight: 700;
-    background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+    background: linear-gradient(
+      135deg,
+      var(--color-primary-dark) 0%,
+      var(--color-accent) 100%
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     margin-bottom: 8px;
   }
 
+  :global(.dark) h1 {
+    background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
   .subtitle {
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 16px;
   }
 
@@ -253,10 +267,10 @@
     gap: 8px;
     padding: 10px 16px;
     margin-bottom: 24px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 10px;
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -264,9 +278,9 @@
   }
 
   .back-btn:hover {
-    background: rgba(102, 126, 234, 0.1);
-    border-color: rgba(102, 126, 234, 0.3);
-    color: #a5b4fc;
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
+    color: var(--color-primary);
     transform: translateX(-4px);
   }
 
@@ -288,10 +302,13 @@
   }
 
   .settings-card {
-    background: #1e293b;
-    border: 1px solid #334155;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 16px;
     padding: 24px;
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease;
   }
 
   .card-header {
@@ -300,7 +317,7 @@
     gap: 16px;
     margin-bottom: 24px;
     padding-bottom: 16px;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid var(--border-color);
   }
 
   .icon-wrapper {
@@ -325,7 +342,7 @@
   h2 {
     font-size: 20px;
     font-weight: 600;
-    color: #f8fafc;
+    color: var(--text-main);
     margin: 0;
   }
 
@@ -357,11 +374,11 @@
 
   .setting-label span {
     font-weight: 500;
-    color: #f1f5f9;
+    color: var(--text-main);
   }
 
   .setting-label small {
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 13px;
   }
 
@@ -371,17 +388,18 @@
     justify-content: center;
     gap: 8px;
     padding: 10px 16px;
-    background: #334155;
-    border: 1px solid #475569;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
-    color: #f8fafc;
+    color: var(--text-main);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .theme-toggle:hover {
-    background: #475569;
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
   }
 
   .input-wrapper {
@@ -393,11 +411,12 @@
   .text-input {
     width: 100%;
     padding: 10px 12px;
-    background: #0f172a;
-    border: 1px solid #334155;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
-    color: #f8fafc;
+    color: var(--text-main);
     font-size: 14px;
+    transition: all 0.2s;
   }
 
   .text-input:focus {
@@ -425,7 +444,7 @@
   .range-input {
     width: 100%;
     height: 6px;
-    background: #334155;
+    background: var(--border-color);
     border-radius: 3px;
     outline: none;
     -webkit-appearance: none;
@@ -449,7 +468,7 @@
     display: flex;
     justify-content: space-between;
     font-size: 10px;
-    color: #94a3b8;
+    color: var(--text-muted);
     text-transform: uppercase;
     font-weight: 600;
     letter-spacing: 0.5px;
