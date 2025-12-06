@@ -9,6 +9,7 @@
   let apiKey = $state("");
   let temperature = $state(0.7);
   let maxTokens = $state(1024);
+  let codeTheme = $state("tokyo-night");
   let isSaved = $state(false);
 
   onMount(() => {
@@ -16,12 +17,14 @@
     apiKey = $settingsStore.apiKey;
     temperature = $settingsStore.temperature;
     maxTokens = $settingsStore.maxTokens;
+    codeTheme = $settingsStore.codeTheme;
   });
 
   function handleSave() {
     settingsStore.setApiKey(apiKey);
     settingsStore.setTemperature(temperature);
     settingsStore.setMaxTokens(maxTokens);
+    settingsStore.setCodeTheme(codeTheme);
 
     isSaved = true;
     setTimeout(() => {
@@ -100,6 +103,18 @@
               <span class="theme-icon">☀️</span> Mode Clair
             {/if}
           </button>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">
+            <span>Theme du code</span>
+            <small>Style des blocs de code</small>
+          </div>
+          <select bind:value={codeTheme} class="select-input">
+            <option value="tokyo-night">Tokyo Night</option>
+            <option value="github-dark">GitHub Dark</option>
+            <option value="dracula">Dracula</option>
+          </select>
         </div>
       </div>
     </section>
@@ -417,6 +432,29 @@
     color: var(--text-main);
     font-size: 14px;
     transition: all 0.2s;
+  }
+
+  .select-input {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-main);
+    font-size: 14px;
+    transition: all 0.2s;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 16px;
+  }
+
+  .select-input:focus {
+    outline: none;
+    border-color: #818cf8;
+    box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.2);
   }
 
   .text-input:focus {

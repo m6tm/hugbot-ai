@@ -2,6 +2,7 @@
   /**
    * Composant MessageBubble - Bulle de message
    */
+  import { settingsStore } from "$lib/stores";
   import type { Message } from "$lib/domain/entities/message";
   import { marked, type Tokens } from "marked";
   import hljs from "highlight.js";
@@ -128,7 +129,7 @@
       {#if isUser}
         <p>{message.content}</p>
       {:else}
-        <div class="markdown-content">
+        <div class="markdown-content {$settingsStore.codeTheme}">
           {@html parsedContent}
         </div>
       {/if}
@@ -189,6 +190,102 @@
 </div>
 
 <style>
+  /* Themes de coloration syntaxique */
+  .markdown-content.tokyo-night {
+    --code-bg: #1a1b26;
+    --code-text: #a9b1d6;
+    --code-comment: #565f89;
+    --code-keyword: #bb9af7;
+    --code-string: #9ece6a;
+    --code-number: #ff9e64;
+    --code-function: #7aa2f7;
+    --code-class: #2ac3de;
+    --code-tag: #f7768e;
+  }
+
+  .markdown-content.github-dark {
+    --code-bg: #0d1117;
+    --code-text: #c9d1d9;
+    --code-comment: #8b949e;
+    --code-keyword: #ff7b72;
+    --code-string: #a5d6ff;
+    --code-number: #79c0ff;
+    --code-function: #d2a8ff;
+    --code-class: #f0883e;
+    --code-tag: #7ee787;
+  }
+
+  .markdown-content.dracula {
+    --code-bg: #282a36;
+    --code-text: #f8f8f2;
+    --code-comment: #6272a4;
+    --code-keyword: #ff79c6;
+    --code-string: #f1fa8c;
+    --code-number: #bd93f9;
+    --code-function: #50fa7b;
+    --code-class: #8be9fd;
+    --code-tag: #ffb86c;
+  }
+
+  /* Application des variables */
+  .markdown-content :global(.code-block) {
+    margin: 1em 0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--code-bg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* ... Mapping des classes hljs vers les variables ... */
+  .markdown-content :global(.hljs-comment),
+  .markdown-content :global(.hljs-quote) {
+    color: var(--code-comment);
+    font-style: italic;
+  }
+
+  .markdown-content :global(.hljs-keyword),
+  .markdown-content :global(.hljs-selector-tag) {
+    color: var(--code-keyword);
+  }
+
+  .markdown-content :global(.hljs-string),
+  .markdown-content :global(.hljs-template-variable),
+  .markdown-content :global(.hljs-addition) {
+    color: var(--code-string);
+  }
+
+  .markdown-content :global(.hljs-number),
+  .markdown-content :global(.hljs-literal) {
+    color: var(--code-number);
+  }
+
+  .markdown-content :global(.hljs-function),
+  .markdown-content :global(.hljs-title),
+  .markdown-content :global(.hljs-section),
+  .markdown-content :global(.hljs-built_in) {
+    color: var(--code-function);
+  }
+
+  .markdown-content :global(.hljs-class .hljs-title),
+  .markdown-content :global(.hljs-type) {
+    color: var(--code-class);
+  }
+
+  .markdown-content :global(.hljs-variable),
+  .markdown-content :global(.hljs-template-variable) {
+    color: var(--code-text);
+  }
+
+  .markdown-content :global(.hljs-tag),
+  .markdown-content :global(.hljs-name),
+  .markdown-content :global(.hljs-attribute) {
+    color: var(--code-tag);
+  }
+
+  .markdown-content :global(.code-block code) {
+    color: var(--code-text);
+  }
+
   .message-bubble {
     display: flex;
     gap: 16px;

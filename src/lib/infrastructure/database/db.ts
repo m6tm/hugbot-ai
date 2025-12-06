@@ -29,6 +29,7 @@ export interface SettingsRecord {
   apiKey: string;
   temperature: number;
   maxTokens: number;
+  codeTheme: string;
 }
 
 export interface ThemeRecord {
