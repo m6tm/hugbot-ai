@@ -116,8 +116,8 @@
     justify-content: space-between;
     width: 100%;
     padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -125,8 +125,8 @@
   }
 
   .selector-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: var(--bg-hover);
+    border-color: var(--color-primary);
   }
 
   .model-info {
@@ -138,16 +138,16 @@
   .model-name {
     font-size: 14px;
     font-weight: 500;
-    color: #e5e7eb;
+    color: var(--text-main);
   }
 
   .model-desc {
     font-size: 12px;
-    color: #6b7280;
+    color: var(--text-muted);
   }
 
   .chevron {
-    color: #6b7280;
+    color: var(--text-dim);
     transition: transform 0.2s ease;
     flex-shrink: 0;
   }
@@ -161,13 +161,18 @@
     top: calc(100% + 8px);
     left: 0;
     right: 0;
-    background: #2a2a40;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
     z-index: 100;
     animation: slideDown 0.2s ease;
     overflow: hidden;
+  }
+
+  /* Ajuster l'ombre en mode clair */
+  :global(:not(.dark)) .dropdown {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   }
 
   @keyframes slideDown {
@@ -202,11 +207,16 @@
   }
 
   .model-option:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-hover);
   }
 
   .model-option.active {
     background: rgba(102, 126, 234, 0.15);
+  }
+
+  /* Ajuster active bg en mode clair */
+  :global(:not(.dark)) .model-option.active {
+    background: rgba(102, 126, 234, 0.1);
   }
 
   .option-content {
@@ -224,22 +234,22 @@
   .option-name {
     font-size: 14px;
     font-weight: 500;
-    color: #e5e7eb;
+    color: var(--text-main);
   }
 
   .option-desc {
     font-size: 12px;
-    color: #6b7280;
+    color: var(--text-muted);
   }
 
   .check-icon {
-    color: #667eea;
+    color: var(--color-primary);
     flex-shrink: 0;
   }
 
   .dropdown-footer {
     padding: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid var(--border-color);
   }
 
   .change-key-btn {
@@ -248,14 +258,14 @@
     background: transparent;
     border: none;
     border-radius: 8px;
-    color: #6b7280;
+    color: var(--text-dim);
     font-size: 13px;
     cursor: pointer;
     transition: all 0.2s ease;
   }
 
   .change-key-btn:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: #e5e7eb;
+    background: var(--bg-hover);
+    color: var(--text-main);
   }
 </style>

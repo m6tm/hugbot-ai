@@ -652,13 +652,16 @@ for await (const chunk of stream) {
 <style>
   .docs-container {
     min-height: 100vh;
-    background: linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 100%);
-    color: #e2e8f0;
+    background: var(--bg-main);
+    color: var(--text-main);
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
   }
 
   .docs-header {
     padding: 40px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--border-color);
     max-width: 1000px;
     margin: 0 auto;
   }
@@ -669,10 +672,10 @@ for await (const chunk of stream) {
     gap: 8px;
     padding: 10px 16px;
     margin-bottom: 32px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
     border-radius: 10px;
-    color: #94a3b8;
+    color: var(--text-secondary);
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -680,9 +683,9 @@ for await (const chunk of stream) {
   }
 
   .back-btn:hover {
-    background: rgba(102, 126, 234, 0.1);
-    border-color: rgba(102, 126, 234, 0.3);
-    color: #a5b4fc;
+    background: var(--bg-hover);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
     transform: translateX(-4px);
   }
 
@@ -696,7 +699,11 @@ for await (const chunk of stream) {
     justify-content: center;
     width: 64px;
     height: 64px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(
+      135deg,
+      var(--color-primary) 0%,
+      var(--color-accent) 100%
+    );
     border-radius: 16px;
     color: white;
     margin-bottom: 24px;
@@ -705,15 +712,26 @@ for await (const chunk of stream) {
   h1 {
     font-size: 36px;
     font-weight: 700;
-    background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+    background: linear-gradient(
+      135deg,
+      var(--color-primary-dark) 0%,
+      var(--color-accent) 100%
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     margin: 0 0 12px;
   }
 
+  :global(.dark) h1 {
+    background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
   .subtitle {
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 18px;
     margin: 0;
   }
@@ -731,21 +749,21 @@ for await (const chunk of stream) {
   .doc-section h2 {
     font-size: 24px;
     font-weight: 600;
-    color: #f8fafc;
+    color: var(--text-main);
     margin: 0 0 16px;
     padding-bottom: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--border-color);
   }
 
   .doc-section h3 {
     font-size: 18px;
     font-weight: 600;
-    color: #e2e8f0;
+    color: var(--text-secondary);
     margin: 32px 0 16px;
   }
 
   .doc-section p {
-    color: #94a3b8;
+    color: var(--text-muted);
     line-height: 1.7;
     margin: 0 0 16px;
   }
@@ -789,7 +807,7 @@ for await (const chunk of stream) {
   }
 
   .info-content strong {
-    color: #e2e8f0;
+    color: var(--text-main);
     font-size: 14px;
   }
 
@@ -799,12 +817,21 @@ for await (const chunk of stream) {
     font-size: 15px;
   }
 
+  :global(:not(.dark)) .base-url {
+    background: rgba(255, 255, 255, 0.5);
+    color: #4f46e5;
+  }
+
   .code-block {
     background: #0d1117;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     overflow: hidden;
     margin: 16px 0;
+  }
+
+  :global(:not(.dark)) .code-block {
+    border: 1px solid #e2e8f0;
   }
 
   .code-header {
@@ -817,7 +844,7 @@ for await (const chunk of stream) {
   }
 
   .code-lang {
-    color: #6b7280;
+    color: #9ca3af;
     font-size: 13px;
     font-weight: 500;
   }
@@ -830,7 +857,7 @@ for await (const chunk of stream) {
     background: rgba(255, 255, 255, 0.1);
     border: none;
     border-radius: 6px;
-    color: #94a3b8;
+    color: #cbd5e1;
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s;
@@ -879,11 +906,11 @@ for await (const chunk of stream) {
 
   .note {
     font-size: 14px;
-    color: #6b7280;
+    color: var(--text-muted);
   }
 
   .note a {
-    color: #667eea;
+    color: var(--color-primary);
     text-decoration: none;
   }
 
@@ -899,15 +926,15 @@ for await (const chunk of stream) {
 
   .endpoint-card {
     padding: 16px 20px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     transition: all 0.2s;
   }
 
   .endpoint-card:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(102, 126, 234, 0.2);
+    background: var(--bg-hover);
+    border-color: var(--color-primary);
   }
 
   .endpoint-header {
@@ -937,7 +964,7 @@ for await (const chunk of stream) {
 
   .endpoint-path {
     background: transparent;
-    color: #e2e8f0;
+    color: var(--text-main);
     font-size: 15px;
   }
 
@@ -953,11 +980,12 @@ for await (const chunk of stream) {
   .endpoint-desc {
     margin: 8px 0 0;
     font-size: 14px;
+    color: var(--text-muted);
   }
 
   .params-table,
   .errors-table {
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     overflow: hidden;
   }
@@ -968,7 +996,7 @@ for await (const chunk of stream) {
     grid-template-columns: 140px 80px 80px 1fr;
     gap: 16px;
     padding: 12px 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--border-color);
     align-items: center;
   }
 
@@ -978,9 +1006,9 @@ for await (const chunk of stream) {
 
   .param-row.header,
   .error-row.header {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-input);
     font-weight: 600;
-    color: #e2e8f0;
+    color: var(--text-secondary);
     font-size: 13px;
   }
 
@@ -995,9 +1023,13 @@ for await (const chunk of stream) {
     padding: 0;
   }
 
+  :global(:not(.dark)) .param-row code {
+    color: #6366f1;
+  }
+
   .param-row span,
   .error-row span {
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 14px;
   }
 
@@ -1007,7 +1039,7 @@ for await (const chunk of stream) {
   }
 
   .optional {
-    color: #6b7280 !important;
+    color: var(--text-dim) !important;
   }
 
   .error-code {
@@ -1024,21 +1056,21 @@ for await (const chunk of stream) {
 
   .model-card {
     padding: 20px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     transition: all 0.2s;
   }
 
   .model-card:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(102, 126, 234, 0.2);
+    background: var(--bg-hover);
+    border-color: var(--color-primary);
     transform: translateY(-2px);
   }
 
   .model-name {
     font-weight: 600;
-    color: #f8fafc;
+    color: var(--text-main);
     margin-bottom: 8px;
   }
 
@@ -1049,18 +1081,25 @@ for await (const chunk of stream) {
     font-size: 12px;
     margin-bottom: 12px;
     word-break: break-all;
+    color: #e2e8f0;
+  }
+
+  :global(:not(.dark)) .model-id {
+    background: #f1f5f9;
+    color: #334155;
   }
 
   .model-desc {
     font-size: 13px;
     margin: 0;
+    color: var(--text-muted);
   }
 
   .docs-footer {
     text-align: center;
     padding: 40px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    color: #6b7280;
+    border-top: 1px solid var(--border-color);
+    color: var(--text-muted);
     font-size: 14px;
   }
 

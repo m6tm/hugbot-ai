@@ -182,7 +182,11 @@
     justify-content: center;
     width: 80px;
     height: 80px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(
+      135deg,
+      var(--color-primary) 0%,
+      var(--color-accent) 100%
+    );
     border-radius: 24px;
     color: white;
     margin-bottom: 24px;
@@ -202,8 +206,19 @@
   h1 {
     font-size: 36px;
     font-weight: 700;
-    color: white;
+    color: var(--text-main);
     margin: 0 0 12px;
+    background: linear-gradient(
+      135deg,
+      var(--color-primary-dark) 0%,
+      var(--color-accent) 100%
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  :global(.dark) h1 {
     background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -212,7 +227,7 @@
 
   .subtitle {
     font-size: 18px;
-    color: #9ca3af;
+    color: var(--text-muted);
     margin: 0 0 32px;
   }
 
@@ -239,8 +254,8 @@
     align-items: flex-start;
     gap: 16px;
     padding: 20px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
     border-radius: 16px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -248,8 +263,8 @@
   }
 
   .suggestion-card:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(102, 126, 234, 0.3);
+    background: var(--bg-hover);
+    border-color: var(--color-primary);
     transform: translateY(-4px);
     box-shadow: 0 10px 40px rgba(102, 126, 234, 0.15);
   }
@@ -266,7 +281,7 @@
       rgba(118, 75, 162, 0.2) 100%
     );
     border-radius: 12px;
-    color: #667eea;
+    color: var(--color-primary);
     flex-shrink: 0;
   }
 
@@ -279,12 +294,12 @@
   .suggestion-title {
     font-size: 15px;
     font-weight: 600;
-    color: #e5e7eb;
+    color: var(--text-main);
   }
 
   .suggestion-desc {
     font-size: 13px;
-    color: #6b7280;
+    color: var(--text-dim);
     line-height: 1.4;
   }
 </style>
