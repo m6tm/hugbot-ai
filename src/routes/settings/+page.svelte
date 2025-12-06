@@ -10,6 +10,7 @@
   let temperature = $state(0.7);
   let maxTokens = $state(1024);
   let codeTheme = $state("tokyo-night");
+  let systemInstruction = $state("");
   let isSaved = $state(false);
 
   onMount(() => {
@@ -18,6 +19,7 @@
     temperature = $settingsStore.temperature;
     maxTokens = $settingsStore.maxTokens;
     codeTheme = $settingsStore.codeTheme;
+    systemInstruction = $settingsStore.systemInstruction;
   });
 
   function handleSave() {
@@ -25,6 +27,7 @@
     settingsStore.setTemperature(temperature);
     settingsStore.setMaxTokens(maxTokens);
     settingsStore.setCodeTheme(codeTheme);
+    settingsStore.setSystemInstruction(systemInstruction);
 
     isSaved = true;
     setTimeout(() => {
@@ -206,6 +209,56 @@
       </div>
     </section>
 
+    <!-- Section Instructions Systeme -->
+    <section class="settings-card">
+      <div class="card-header">
+        <div class="icon-wrapper system">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+            ></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </div>
+        <h2>Instructions Systeme</h2>
+      </div>
+
+      <div class="card-content">
+        <div class="setting-item full-width">
+          <div class="setting-label">
+            <span>Prompt Systeme</span>
+            <small
+              >Instructions globales pour definir le comportement de l'IA.</small
+            >
+          </div>
+          <div class="input-wrapper">
+            <textarea
+              bind:value={systemInstruction}
+              class="text-area"
+              rows="10"
+              placeholder="Entrez vos instructions systeme ici..."
+            ></textarea>
+            <div class="helper-text">
+              Ces instructions seront envoyees a chaque debut de conversation
+              pour guider l'IA.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <div class="settings-actions">
       <button class="save-btn" onclick={handleSave} disabled={isSaved}>
         {#if isSaved}
@@ -354,6 +407,11 @@
     color: #818cf8;
   }
 
+  .icon-wrapper.system {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+  }
+
   h2 {
     font-size: 20px;
     font-weight: 600;
@@ -372,6 +430,10 @@
     grid-template-columns: 1fr 1fr;
     gap: 24px;
     align-items: start;
+  }
+
+  .setting-item.full-width {
+    grid-template-columns: 1fr;
   }
 
   @media (max-width: 640px) {
@@ -432,6 +494,33 @@
     color: var(--text-main);
     font-size: 14px;
     transition: all 0.2s;
+  }
+
+  .text-area {
+    width: 100%;
+    padding: 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-main);
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    transition: all 0.2s;
+    min-height: 150px;
+    line-height: 1.5;
+  }
+
+  .text-area:focus {
+    outline: none;
+    border-color: #818cf8;
+    box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.2);
+  }
+
+  .helper-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
   }
 
   .select-input {

@@ -30,6 +30,7 @@ export interface SettingsRecord {
   temperature: number;
   maxTokens: number;
   codeTheme: string;
+  systemInstruction?: string;
 }
 
 export interface ThemeRecord {

@@ -10,6 +10,8 @@ import type {
   ChatCompletionOptions,
 } from "$lib/domain/ports/chat-service.port";
 
+import { DEFAULT_SYSTEM_INSTRUCTION } from "$lib/config/default-system-prompt";
+
 interface HuggingFaceConfig {
   apiKey?: string;
   modelId: string;
@@ -37,6 +39,26 @@ export class HuggingFaceAdapter implements ChatServicePort {
     this.apiKey = apiKey;
   }
 
+  private formatMessages(messages: Message[], systemInstruction?: string) {
+    const formattedMessages = messages.map((m) => ({
+      role: m.role as "user" | "assistant" | "system",
+      content: m.content,
+    }));
+
+    // Combine default instruction with user instruction
+    let systemContent = DEFAULT_SYSTEM_INSTRUCTION;
+    if (systemInstruction) {
+      systemContent += "\n\n" + systemInstruction;
+    }
+
+    formattedMessages.unshift({
+      role: "system",
+      content: systemContent,
+    });
+
+    return formattedMessages;
+  }
+
   /**
    * Appelle la route API serveur (mode non-streaming)
    */
@@ -44,10 +66,10 @@ export class HuggingFaceAdapter implements ChatServicePort {
     messages: Message[],
     options?: ChatCompletionOptions
   ): Promise<string> {
-    const formattedMessages = messages.map((m) => ({
-      role: m.role as "user" | "assistant" | "system",
-      content: m.content,
-    }));
+    const formattedMessages = this.formatMessages(
+      messages,
+      options?.systemInstruction
+    );
 
     const response = await fetch("/api/chat", {
       method: "POST",
@@ -90,10 +112,10 @@ export class HuggingFaceAdapter implements ChatServicePort {
     options?: ChatCompletionOptions,
     onChunk?: (chunk: string) => void
   ): Promise<string> {
-    const formattedMessages = messages.map((m) => ({
-      role: m.role as "user" | "assistant" | "system",
-      content: m.content,
-    }));
+    const formattedMessages = this.formatMessages(
+      messages,
+      options?.systemInstruction
+    );
 
     const response = await fetch("/api/chat", {
       method: "POST",

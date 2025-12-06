@@ -10,6 +10,7 @@ export interface ChatCompletionOptions {
   temperature?: number;
   maxTokens?: number;
   stream?: boolean;
+  systemInstruction?: string;
 }
 
 export interface ChatServicePort {

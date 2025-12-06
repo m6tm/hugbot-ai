@@ -17,6 +17,7 @@ interface SettingsState {
   temperature: number;
   maxTokens: number;
   codeTheme: string;
+  systemInstruction: string;
   isApiKeyConfigured: boolean;
 }
 
@@ -29,6 +30,7 @@ function getDefaultSettings(): SettingsState {
     temperature: 0.7,
     maxTokens: 1024,
     codeTheme: "tokyo-night",
+    systemInstruction: "",
     isApiKeyConfigured: false,
   };
 }
@@ -47,6 +49,7 @@ async function loadSettings(): Promise<SettingsState> {
         temperature: stored.temperature ?? 0.7,
         maxTokens: stored.maxTokens ?? 1024,
         codeTheme: stored.codeTheme || "tokyo-night",
+        systemInstruction: stored.systemInstruction || "",
         isApiKeyConfigured: !!stored.apiKey,
       };
     }
@@ -71,6 +74,7 @@ async function saveSettings(state: SettingsState): Promise<void> {
     temperature: state.temperature,
     maxTokens: state.maxTokens,
     codeTheme: state.codeTheme,
+    systemInstruction: state.systemInstruction,
   });
 }
 
@@ -147,6 +151,17 @@ function createSettingsStore() {
     setCodeTheme(codeTheme: string) {
       update((state) => {
         const newState = { ...state, codeTheme };
+        saveSettings(newState);
+        return newState;
+      });
+    },
+
+    /**
+     * Met a jour l'instruction systeme
+     */
+    setSystemInstruction(systemInstruction: string) {
+      update((state) => {
+        const newState = { ...state, systemInstruction };
         saveSettings(newState);
         return newState;
       });

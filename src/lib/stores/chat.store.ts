@@ -191,6 +191,7 @@ function createChatStore() {
             stream: true,
             temperature: settings.temperature,
             maxTokens: settings.maxTokens,
+            systemInstruction: settings.systemInstruction,
           },
           (chunk) => {
             update((s) => ({
