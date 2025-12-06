@@ -9,6 +9,7 @@ import {
   getModelById,
   type AIModel,
 } from "$lib/config/models";
+import { db, isIndexedDBAvailable } from "$lib/infrastructure/database/db";
 
 interface SettingsState {
   currentModelId: string;
@@ -18,29 +19,7 @@ interface SettingsState {
   isApiKeyConfigured: boolean;
 }
 
-const STORAGE_KEY = "chat_ai_settings";
-
-function loadSettings(): SettingsState {
-  if (typeof localStorage === "undefined") {
-    return getDefaultSettings();
-  }
-
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return {
-        ...getDefaultSettings(),
-        ...parsed,
-        isApiKeyConfigured: !!parsed.apiKey,
-      };
-    }
-  } catch {
-    // Ignore
-  }
-
-  return getDefaultSettings();
-}
+const SETTINGS_ID = "main_settings";
 
 function getDefaultSettings(): SettingsState {
   return {
@@ -52,18 +31,39 @@ function getDefaultSettings(): SettingsState {
   };
 }
 
-function saveSettings(state: SettingsState): void {
-  if (typeof localStorage === "undefined") return;
+async function loadSettings(): Promise<SettingsState> {
+  if (!isIndexedDBAvailable()) {
+    return getDefaultSettings();
+  }
 
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({
-      currentModelId: state.currentModelId,
-      apiKey: state.apiKey,
-      temperature: state.temperature,
-      maxTokens: state.maxTokens,
-    })
-  );
+  try {
+    const stored = await db.settings.get(SETTINGS_ID);
+    if (stored) {
+      return {
+        currentModelId: stored.currentModelId || getDefaultModel().id,
+        apiKey: stored.apiKey || "",
+        temperature: stored.temperature ?? 0.7,
+        maxTokens: stored.maxTokens ?? 1024,
+        isApiKeyConfigured: !!stored.apiKey,
+      };
+    }
+  } catch {
+    // Ignore
+  }
+
+  return getDefaultSettings();
+}
+
+async function saveSettings(state: SettingsState): Promise<void> {
+  if (!isIndexedDBAvailable()) return;
+
+  await db.settings.put({
+    id: SETTINGS_ID,
+    currentModelId: state.currentModelId,
+    apiKey: state.apiKey,
+    temperature: state.temperature,
+    maxTokens: state.maxTokens,
+  });
 }
 
 function createSettingsStore() {
@@ -75,10 +75,10 @@ function createSettingsStore() {
     subscribe,
 
     /**
-     * Initialise le store depuis le localStorage
+     * Initialise le store depuis IndexedDB
      */
-    init() {
-      const settings = loadSettings();
+    async init() {
+      const settings = await loadSettings();
       set(settings);
     },
 
@@ -151,10 +151,10 @@ function createSettingsStore() {
     /**
      * Reset les parametres
      */
-    reset() {
+    async reset() {
       const defaultSettings = getDefaultSettings();
       set(defaultSettings);
-      saveSettings(defaultSettings);
+      await saveSettings(defaultSettings);
     },
   };
 }

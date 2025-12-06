@@ -60,18 +60,13 @@ export class ChatUseCase {
    * Envoie un message et recoit une reponse
    */
   async sendMessage(
-    conversationId: string,
+    conversation: Conversation,
     content: string,
     options?: ChatCompletionOptions,
     onStreamChunk?: (chunk: string) => void
   ): Promise<{ userMessage: Message; assistantMessage: Message }> {
-    const conversation = await this.storage.getConversation(conversationId);
-    if (!conversation) {
-      throw new Error("Conversation non trouvee");
-    }
-
     const userMessage = createMessage({
-      conversationId,
+      conversationId: conversation.id,
       role: "user",
       content,
     });
@@ -100,7 +95,7 @@ export class ChatUseCase {
     }
 
     const assistantMessage = createMessage({
-      conversationId,
+      conversationId: conversation.id,
       role: "assistant",
       content: responseContent,
     });

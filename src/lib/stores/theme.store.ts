@@ -4,8 +4,11 @@
 
 import { writable, derived } from "svelte/store";
 import { theme as defaultTheme } from "$lib/config/theme";
+import { db, isIndexedDBAvailable } from "$lib/infrastructure/database/db";
 
 type ThemeMode = "light" | "dark" | "system";
+
+const THEME_ID = "main_theme";
 
 interface ThemeState {
   mode: ThemeMode;
@@ -22,34 +25,50 @@ function createThemeStore() {
     subscribe,
 
     /**
-     * Initialise le theme depuis le localStorage
+     * Initialise le theme depuis IndexedDB
      */
-    init() {
+    async init() {
       if (typeof window === "undefined") return;
 
-      const stored = localStorage.getItem("chat_ai_theme");
-      if (stored) {
-        const mode = stored as ThemeMode;
-        const isDark = this.resolveIsDark(mode);
-        set({ mode, isDark });
-        this.applyTheme(isDark);
-      } else {
+      if (!isIndexedDBAvailable()) {
         this.applyTheme(true);
+        return;
       }
 
-      if (stored === "system") {
-        window
-          .matchMedia("(prefers-color-scheme: dark)")
-          .addEventListener("change", (e) => {
-            update((state) => {
-              if (state.mode === "system") {
-                const isDark = e.matches;
-                this.applyTheme(isDark);
-                return { ...state, isDark };
-              }
-              return state;
-            });
+      try {
+        const stored = await db.theme.get(THEME_ID);
+        if (stored) {
+          const mode = stored.mode;
+          const isDark = this.resolveIsDark(mode);
+          set({ mode, isDark });
+          this.applyTheme(isDark);
+        } else {
+          this.applyTheme(true);
+        }
+
+        const currentState = await new Promise<ThemeState>((resolve) => {
+          const unsubscribe = subscribe((state) => {
+            resolve(state);
+            setTimeout(() => unsubscribe(), 0);
           });
+        });
+
+        if (currentState.mode === "system") {
+          window
+            .matchMedia("(prefers-color-scheme: dark)")
+            .addEventListener("change", (e) => {
+              update((state) => {
+                if (state.mode === "system") {
+                  const isDark = e.matches;
+                  this.applyTheme(isDark);
+                  return { ...state, isDark };
+                }
+                return state;
+              });
+            });
+        }
+      } catch {
+        this.applyTheme(true);
       }
     },
 
@@ -81,11 +100,11 @@ function createThemeStore() {
     /**
      * Change le mode du theme
      */
-    setMode(mode: ThemeMode) {
+    async setMode(mode: ThemeMode) {
       const isDark = this.resolveIsDark(mode);
 
-      if (typeof localStorage !== "undefined") {
-        localStorage.setItem("chat_ai_theme", mode);
+      if (isIndexedDBAvailable()) {
+        await db.theme.put({ id: THEME_ID, mode });
       }
 
       this.applyTheme(isDark);
@@ -100,8 +119,8 @@ function createThemeStore() {
         const newMode: ThemeMode = state.isDark ? "light" : "dark";
         const isDark = !state.isDark;
 
-        if (typeof localStorage !== "undefined") {
-          localStorage.setItem("chat_ai_theme", newMode);
+        if (isIndexedDBAvailable()) {
+          db.theme.put({ id: THEME_ID, mode: newMode });
         }
 
         this.applyTheme(isDark);

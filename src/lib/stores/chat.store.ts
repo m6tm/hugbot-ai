@@ -7,7 +7,7 @@ import type { Conversation } from "$lib/domain/entities/conversation";
 import type { Message } from "$lib/domain/entities/message";
 import type { ChatServicePort } from "$lib/domain/ports/chat-service.port";
 import { ChatUseCase } from "$lib/application/use-cases/chat.use-case";
-import { LocalStorageAdapter } from "$lib/infrastructure/adapters/local-storage.adapter";
+import { DexieStorageAdapter } from "$lib/infrastructure/adapters/dexie-storage.adapter";
 import { MockChatAdapter } from "$lib/infrastructure/adapters/mock-chat.adapter";
 import { HuggingFaceAdapter } from "$lib/infrastructure/adapters/huggingface.adapter";
 import { settingsStore } from "./settings.store";
@@ -34,7 +34,7 @@ const initialState: ChatState = {
 function createChatStore() {
   const { subscribe, set, update } = writable<ChatState>(initialState);
 
-  const storage = new LocalStorageAdapter();
+  const storage = new DexieStorageAdapter();
   const mockAdapter = new MockChatAdapter();
   const huggingFaceAdapter = new HuggingFaceAdapter({
     apiKey: "",
@@ -166,6 +166,14 @@ function createChatStore() {
 
       const currentState = get({ subscribe });
       const conversationId = currentState.currentConversationId!;
+      const conversation = currentState.conversations.find(
+        (c) => c.id === conversationId
+      );
+
+      if (!conversation) {
+        throw new Error("Conversation introuvable");
+      }
+
       const settings = get(settingsStore);
 
       update((s) => ({
@@ -177,7 +185,7 @@ function createChatStore() {
       try {
         const chatUseCase = createUseCase();
         const { userMessage, assistantMessage } = await chatUseCase.sendMessage(
-          conversationId,
+          conversation,
           content,
           {
             stream: true,
