@@ -2,9 +2,10 @@
   /**
    * Page des parametres
    */
-  import { settingsStore, themeStore } from "$lib/stores";
+  import { settingsStore, themeStore, integrationsStore } from "$lib/stores";
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
+  import { slide } from "svelte/transition";
 
   let apiKey = $state("");
   let temperature = $state(0.7);
@@ -12,14 +13,35 @@
   let codeTheme = $state("tokyo-night");
   let systemInstruction = $state("");
   let isSaved = $state(false);
+  let isTelegramSaved = $state(false);
 
-  onMount(() => {
-    // Charger les valeurs actuelles
+  // Variables pour les intégrations
+  let telegramEnabled = $state(false);
+  let telegramBotToken = $state("");
+  let telegramChatId = $state("");
+  let telegramSendOnNewMessage = $state(true);
+  let telegramSendOnError = $state(true);
+  let telegramTestStatus = $state<"idle" | "testing" | "success" | "error">(
+    "idle"
+  );
+
+  onMount(async () => {
+    // Initialiser et charger les valeurs actuelles
+    await integrationsStore.init();
+
     apiKey = $settingsStore.apiKey;
     temperature = $settingsStore.temperature;
     maxTokens = $settingsStore.maxTokens;
     codeTheme = $settingsStore.codeTheme;
     systemInstruction = $settingsStore.systemInstruction;
+
+    // Charger les intégrations
+    const integrations = $integrationsStore;
+    telegramEnabled = integrations.telegram.enabled;
+    telegramBotToken = integrations.telegram.botToken;
+    telegramChatId = integrations.telegram.chatId;
+    telegramSendOnNewMessage = integrations.telegram.sendOnNewMessage;
+    telegramSendOnError = integrations.telegram.sendOnError;
   });
 
   function handleSave() {
@@ -33,6 +55,80 @@
     setTimeout(() => {
       isSaved = false;
     }, 3000);
+  }
+
+  function handleTelegramToggle() {
+    telegramEnabled = !telegramEnabled;
+    integrationsStore.toggleTelegram(telegramEnabled);
+  }
+
+  function handleTelegramConfigSave() {
+    integrationsStore.setTelegramConfig({
+      botToken: telegramBotToken,
+      chatId: telegramChatId,
+      sendOnNewMessage: telegramSendOnNewMessage,
+      sendOnError: telegramSendOnError,
+    });
+
+    isTelegramSaved = true;
+    setTimeout(() => {
+      isTelegramSaved = false;
+    }, 3000);
+  }
+
+  let telegramErrorMessage = $state("");
+
+  // État pour le collapse de l'aide
+  let isHelpCollapsed = $state(true);
+
+  async function testTelegramConnection() {
+    if (!telegramBotToken) return;
+
+    telegramTestStatus = "testing";
+    telegramErrorMessage = "";
+
+    const result =
+      await integrationsStore.testTelegramConnection(telegramBotToken);
+
+    if (result.ok) {
+      telegramTestStatus = "success";
+      if (result.bot?.username) {
+        telegramErrorMessage = `Bot @${result.bot.username} connecté`;
+      }
+    } else {
+      telegramTestStatus = "error";
+      telegramErrorMessage = result.error || "Erreur de connexion";
+    }
+
+    setTimeout(() => {
+      telegramTestStatus = "idle";
+      telegramErrorMessage = "";
+    }, 4000);
+  }
+
+  async function sendTelegramTestMessage() {
+    if (!telegramBotToken || !telegramChatId) return;
+
+    telegramTestStatus = "testing";
+    telegramErrorMessage = "";
+
+    const result = await integrationsStore.sendTelegramTestMessage(
+      telegramBotToken,
+      telegramChatId
+    );
+
+    if (result.ok) {
+      telegramTestStatus = "success";
+      telegramErrorMessage = "Message envoyé !";
+    } else {
+      telegramTestStatus = "error";
+      telegramErrorMessage = result.error || "Échec de l'envoi";
+    }
+
+    setTimeout(() => {
+      telegramTestStatus = "idle";
+      telegramErrorMessage = "";
+    }, 4000);
   }
 </script>
 
@@ -101,9 +197,46 @@
           </div>
           <button class="theme-toggle" onclick={() => themeStore.toggle()}>
             {#if $themeStore.isDark}
-              <span class="theme-icon">🌙</span> Mode Sombre
+              <svg
+                class="theme-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+                ></path>
+              </svg>
+              Mode Sombre
             {:else}
-              <span class="theme-icon">☀️</span> Mode Clair
+              <svg
+                class="theme-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="5"></circle>
+                <path d="M12 1v2"></path>
+                <path d="M12 21v2"></path>
+                <path d="m4.22 4.22 1.42 1.42"></path>
+                <path d="m18.36 18.36 1.42 1.42"></path>
+                <path d="M1 12h2"></path>
+                <path d="M21 12h2"></path>
+                <path d="m4.22 19.78 1.42-1.42"></path>
+                <path d="m18.36 5.64 1.42-1.42"></path>
+              </svg>
+              Mode Clair
             {/if}
           </button>
         </div>
@@ -259,13 +392,14 @@
       </div>
     </section>
 
-    <div class="settings-actions">
-      <button class="save-btn" onclick={handleSave} disabled={isSaved}>
-        {#if isSaved}
+    <!-- Section Intégrations -->
+    <section class="settings-card">
+      <div class="card-header">
+        <div class="icon-wrapper integration">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
+            width="20"
+            height="20"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -273,9 +407,348 @@
             stroke-linecap="round"
             stroke-linejoin="round"
           >
-            <polyline points="20 6 9 17 4 12" />
+            <path d="M16 22h2a2 2 0 0 0 2-2V7l-5-5H5a2 2 0 0 0-2 2v3.5" />
+            <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+            <path
+              d="M10.29 10.7a2.43 2.43 0 0 0-2.66-.52c-.29.12-.56.3-.78.53l-.35.34-.35-.34a2.43 2.43 0 0 0-2.65-.53c-.3.12-.56.3-.79.53-.95.94-1 2.53.2 3.74L6.5 18l3.6-3.55c1.2-1.21 1.14-2.8.19-3.74Z"
+            />
           </svg>
-          Enregistre !
+        </div>
+        <h2>Intégrations</h2>
+      </div>
+
+      <div class="card-content">
+        <div class="integration-help">
+          <p>
+            Connectez ChatAI à vos systèmes externes pour recevoir des
+            notifications en temps réel.
+          </p>
+          <a href="/docs/integrations" class="docs-link">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+              />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <polyline points="10 9 9 9 8 9" />
+            </svg>
+            Voir la documentation
+          </a>
+        </div>
+        <!-- Intégration Telegram -->
+        <div class="integration-item">
+          <div class="integration-header">
+            <div class="integration-info">
+              <div class="integration-title">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.93 1.23-5.46 3.61-.52.36-.99.53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.37-.49 1.02-.74 4.02-1.76 6.7-2.92 8.03-3.49 3.82-1.58 4.62-1.85 5.14-1.86.11 0 .37.03.53.16.14.11.18.26.2.37.02.06.04.19.02.3z"
+                    fill="currentColor"
+                  />
+                </svg>
+                <span>Telegram</span>
+              </div>
+              <small>Recevez des notifications via Telegram</small>
+            </div>
+            <label class="toggle-switch">
+              <input
+                type="checkbox"
+                checked={telegramEnabled}
+                onchange={handleTelegramToggle}
+              />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          {#if telegramEnabled}
+            <div class="integration-config">
+              <div class="setting-item">
+                <div class="setting-label">
+                  <span>Token du Bot</span>
+                  <small>Créez un bot via @BotFather sur Telegram</small>
+                </div>
+                <div class="input-wrapper">
+                  <input
+                    type="password"
+                    placeholder="1234567890:ABCdefghijklmnopqrstuvwxyz"
+                    bind:value={telegramBotToken}
+                    class="text-input"
+                  />
+                  <div class="button-group">
+                    <button
+                      class="test-btn"
+                      onclick={testTelegramConnection}
+                      disabled={!telegramBotToken ||
+                        telegramTestStatus === "testing"}
+                    >
+                      {#if telegramTestStatus === "testing"}
+                        Test...
+                      {:else if telegramTestStatus === "success"}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Valide
+                      {:else if telegramTestStatus === "error"}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                        Erreur
+                      {:else}
+                        Tester Bot
+                      {/if}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="setting-item">
+                <div class="setting-label">
+                  <span>Chat ID</span>
+                  <small>ID du chat où envoyer les notifications</small>
+                </div>
+                <div class="input-wrapper">
+                  <input
+                    type="text"
+                    placeholder="-1001234567890"
+                    bind:value={telegramChatId}
+                    class="text-input"
+                  />
+                  <div class="button-group">
+                    <button
+                      class="test-btn"
+                      onclick={sendTelegramTestMessage}
+                      disabled={!telegramBotToken ||
+                        !telegramChatId ||
+                        telegramTestStatus === "testing"}
+                    >
+                      {#if telegramTestStatus === "testing"}
+                        Envoi...
+                      {:else if telegramTestStatus === "success"}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Envoyé
+                      {:else if telegramTestStatus === "error"}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                        Échec
+                      {:else}
+                        Test Message
+                      {/if}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {#if telegramErrorMessage}
+                <div
+                  class="telegram-status"
+                  class:success={telegramTestStatus === "success"}
+                  class:error={telegramTestStatus === "error"}
+                >
+                  {telegramErrorMessage}
+                </div>
+              {/if}
+
+              <div class="setting-item">
+                <div class="setting-label">
+                  <span>Options de notification</span>
+                  <small>Configurez quand recevoir des notifications</small>
+                </div>
+                <div class="checkbox-group">
+                  <label class="checkbox-item">
+                    <input
+                      type="checkbox"
+                      bind:checked={telegramSendOnNewMessage}
+                    />
+                    <span>Nouveaux messages</span>
+                  </label>
+                  <label class="checkbox-item">
+                    <input type="checkbox" bind:checked={telegramSendOnError} />
+                    <span>Erreurs système</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Tutoriel d'aide -->
+              <div class="telegram-help">
+                <div
+                  class="help-title"
+                  onclick={() => {
+                    isHelpCollapsed = !isHelpCollapsed;
+                  }}
+                  role="button"
+                  tabindex="0"
+                  onkeydown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      isHelpCollapsed = !isHelpCollapsed;
+                    }
+                  }}
+                >
+                  <svg
+                    class="help-icon"
+                    class:rotated={!isHelpCollapsed}
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M9 18l6-6-6-6"></path>
+                  </svg>
+                  <span>Comment configurer ?</span>
+                </div>
+
+                {#if !isHelpCollapsed}
+                  <div
+                    class="help-content"
+                    transition:slide={{ duration: 300 }}
+                  >
+                    <div class="help-section">
+                      <h5>Obtenir le Token du Bot</h5>
+                      <ol>
+                        <li>
+                          Ouvrez Telegram et recherchez <strong
+                            >@BotFather</strong
+                          >
+                        </li>
+                        <li>
+                          Envoyez <code>/newbot</code> et suivez les instructions
+                        </li>
+                        <li>
+                          Copiez le token fourni (format: <code
+                            >123456:ABC-xyz...</code
+                          >)
+                        </li>
+                      </ol>
+                    </div>
+
+                    <div class="help-section">
+                      <h5>Obtenir votre Chat ID</h5>
+                      <div class="help-method">
+                        <strong>Méthode simple :</strong>
+                        <ol>
+                          <li>
+                            Recherchez <strong>@userinfobot</strong> sur Telegram
+                          </li>
+                          <li>Envoyez-lui n'importe quel message</li>
+                          <li>Il vous répondra avec votre Chat ID</li>
+                        </ol>
+                      </div>
+                      <div class="help-method">
+                        <strong>Pour un groupe :</strong>
+                        <ol>
+                          <li>Ajoutez votre bot au groupe</li>
+                          <li>Envoyez un message dans le groupe</li>
+                          <li>
+                            Visitez : <code
+                              >https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code
+                            >
+                          </li>
+                          <li>
+                            Cherchez <code>"chat":{'"id":'}</code> dans la réponse
+                          </li>
+                        </ol>
+                      </div>
+                      <div class="help-note">
+                        <strong>Note :</strong>
+                        Les Chat ID personnels sont positifs (ex:
+                        <code>123456789</code>), les groupes sont négatifs (ex:
+                        <code>-1001234567890</code>)
+                      </div>
+                    </div>
+                  </div>
+                {/if}
+              </div>
+
+              <div class="integration-actions">
+                <button
+                  class="save-btn-small"
+                  onclick={handleTelegramConfigSave}
+                  disabled={isTelegramSaved}
+                >
+                  {#if isTelegramSaved}
+                    ✓ Configuration sauvegardée
+                  {:else}
+                    Sauvegarder la configuration
+                  {/if}
+                </button>
+              </div>
+            </div>
+          {/if}
+        </div>
+      </div>
+    </section>
+
+    <div class="settings-actions">
+      <button class="save-btn" onclick={handleSave} disabled={isSaved}>
+        {#if isSaved}
+          <span>✓ Enregistre ! </span>
         {:else}
           Enregistrer les modifications
         {/if}
@@ -410,6 +883,11 @@
   .icon-wrapper.system {
     background: rgba(16, 185, 129, 0.1);
     color: #10b981;
+  }
+
+  .icon-wrapper.integration {
+    background: rgba(147, 51, 234, 0.1);
+    color: #9333ea;
   }
 
   h2 {
@@ -630,5 +1108,342 @@
   .save-btn:disabled {
     background: #10b981;
     cursor: default;
+  }
+
+  /* Styles pour les intégrations */
+  .integration-item {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    background: var(--bg-input);
+  }
+
+  .integration-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .integration-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .integration-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    color: var(--text-main);
+  }
+
+  .integration-title svg {
+    color: #0088cc;
+  }
+
+  .toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+  }
+
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--border-color);
+    transition: 0.3s;
+    border-radius: 24px;
+  }
+
+  .toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+  }
+
+  input:checked + .toggle-slider {
+    background-color: #9333ea;
+  }
+
+  input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+  }
+
+  .integration-config {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .button-group {
+    display: flex;
+    gap: 8px;
+  }
+
+  .test-btn {
+    padding: 8px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-main);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .test-btn:hover:not(:disabled) {
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
+  }
+
+  .test-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .checkbox-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #9333ea;
+  }
+
+  .integration-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .save-btn-small {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .save-btn-small:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(147, 51, 234, 0.3);
+  }
+
+  .save-btn-small:disabled {
+    background: #10b981;
+    cursor: default;
+  }
+
+  .integration-help {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: var(--bg-input);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+  }
+
+  .integration-help p {
+    margin: 0 0 12px 0;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .docs-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #818cf8;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+
+  .docs-link:hover {
+    color: #6366f1;
+    text-decoration: underline;
+  }
+
+  .telegram-status {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    margin-top: 8px;
+  }
+
+  .telegram-status.success {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #10b981;
+  }
+
+  .telegram-status.error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+  }
+
+  /* Styles pour le tutoriel Telegram */
+  .telegram-help {
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 16px;
+  }
+
+  .help-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 16px;
+    font-size: 15px;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+    user-select: none;
+  }
+
+  .help-title:hover {
+    background: var(--bg-hover);
+  }
+
+  .help-title:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .help-icon {
+    transition: transform 0.3s ease;
+    color: var(--text-muted);
+  }
+
+  .help-icon.rotated {
+    transform: rotate(90deg);
+  }
+
+  .help-content {
+    overflow: hidden;
+  }
+
+  .help-title svg {
+    color: #818cf8;
+  }
+
+  .help-section {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .help-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  .help-section h5 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-main);
+    margin: 0 0 12px 0;
+  }
+
+  .help-section ol {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .help-section li {
+    margin-bottom: 6px;
+  }
+
+  .help-section code {
+    background: var(--bg-card);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #818cf8;
+    font-family: monospace;
+  }
+
+  .help-method {
+    margin-bottom: 12px;
+  }
+
+  .help-method strong {
+    display: block;
+    color: var(--text-main);
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+
+  .help-note {
+    background: rgba(129, 140, 248, 0.1);
+    border: 1px solid rgba(129, 140, 248, 0.2);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 12px;
+  }
+
+  .help-note strong {
+    color: #818cf8;
+  }
+
+  .help-note code {
+    background: var(--bg-card);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #818cf8;
   }
 </style>

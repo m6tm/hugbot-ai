@@ -11,7 +11,9 @@ import { DexieStorageAdapter } from "$lib/infrastructure/adapters/dexie-storage.
 import { MockChatAdapter } from "$lib/infrastructure/adapters/mock-chat.adapter";
 import { HuggingFaceAdapter } from "$lib/infrastructure/adapters/huggingface.adapter";
 import { settingsStore } from "./settings.store";
+import { integrationsStore } from "./integrations.store";
 import { getModelById } from "$lib/config/models";
+import { telegramService } from "$lib/services/telegram.service";
 
 interface ChatState {
   conversations: Conversation[];
@@ -134,7 +136,7 @@ function createChatStore() {
         await chatUseCase.deleteConversation(id);
         update((state) => {
           const newConversations = state.conversations.filter(
-            (c) => c.id !== id
+            (c) => c.id !== id,
           );
           return {
             ...state,
@@ -167,7 +169,7 @@ function createChatStore() {
       const currentState = get({ subscribe });
       const conversationId = currentState.currentConversationId!;
       const conversation = currentState.conversations.find(
-        (c) => c.id === conversationId
+        (c) => c.id === conversationId,
       );
 
       if (!conversation) {
@@ -198,7 +200,7 @@ function createChatStore() {
               ...s,
               streamingContent: s.streamingContent + chunk,
             }));
-          }
+          },
         );
 
         update((s) => {
@@ -209,7 +211,7 @@ function createChatStore() {
                 messages: [
                   ...conv.messages.filter(
                     (m) =>
-                      m.id !== userMessage.id && m.id !== assistantMessage.id
+                      m.id !== userMessage.id && m.id !== assistantMessage.id,
                   ),
                   userMessage,
                   assistantMessage,
@@ -231,6 +233,23 @@ function createChatStore() {
             streamingContent: "",
           };
         });
+
+        // Envoyer une notification Telegram si configurée
+        try {
+          const integrations = get(integrationsStore);
+          if (integrations.telegram.enabled) {
+            await telegramService.updateConfig(integrations.telegram);
+            await telegramService.notifyNewMessage(
+              content,
+              assistantMessage.content,
+            );
+          }
+        } catch (telegramError) {
+          console.warn(
+            "Erreur lors de l'envoi de notification Telegram:",
+            telegramError,
+          );
+        }
       } catch (error) {
         update((s) => ({
           ...s,
@@ -238,6 +257,26 @@ function createChatStore() {
           isStreaming: false,
           streamingContent: "",
         }));
+
+        // Envoyer une notification d'erreur Telegram si configurée
+        try {
+          const integrations = get(integrationsStore);
+          if (
+            integrations.telegram.enabled &&
+            integrations.telegram.sendOnError
+          ) {
+            await telegramService.updateConfig(integrations.telegram);
+            await telegramService.notifyError(
+              (error as Error).message,
+              "Envoi de message",
+            );
+          }
+        } catch (telegramError) {
+          console.warn(
+            "Erreur lors de l'envoi de notification d'erreur Telegram:",
+            telegramError,
+          );
+        }
       }
     },
 
@@ -251,7 +290,7 @@ function createChatStore() {
         update((state) => ({
           ...state,
           conversations: state.conversations.map((conv) =>
-            conv.id === id ? { ...conv, title: newTitle } : conv
+            conv.id === id ? { ...conv, title: newTitle } : conv,
           ),
         }));
       } catch (error) {

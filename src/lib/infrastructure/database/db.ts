@@ -25,12 +25,19 @@ export interface MessageRecord {
 
 export interface SettingsRecord {
   id: string;
-  currentModelId: string;
-  apiKey: string;
-  temperature: number;
-  maxTokens: number;
-  codeTheme: string;
+  currentModelId?: string;
+  apiKey?: string;
+  temperature?: number;
+  maxTokens?: number;
+  codeTheme?: string;
   systemInstruction?: string;
+  telegram?: {
+    enabled: boolean;
+    botToken: string;
+    chatId: string;
+    sendOnNewMessage: boolean;
+    sendOnError: boolean;
+  };
 }
 
 export interface ThemeRecord {
