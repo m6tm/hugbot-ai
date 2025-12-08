@@ -6,6 +6,17 @@
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
   import { slide } from "svelte/transition";
+  import {
+    ArrowLeft,
+    Sun,
+    Moon,
+    Mic,
+    FileText,
+    Heart,
+    Check,
+    X,
+    ChevronRight,
+  } from "lucide-svelte";
 
   let apiKey = $state("");
   let temperature = $state(0.7);
@@ -139,20 +150,7 @@
       onclick={() => goto("/")}
       aria-label="Retour a l'accueil"
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="m12 19-7-7 7-7" />
-        <path d="M19 12H5" />
-      </svg>
+      <ArrowLeft size={20} />
       <span>Retour</span>
     </button>
     <h1>Parametres</h1>
@@ -164,27 +162,7 @@
     <section class="settings-card">
       <div class="card-header">
         <div class="icon-wrapper theme">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="12" r="5" />
-            <path d="M12 1v2" />
-            <path d="M12 21v2" />
-            <path d="m4.22 4.22 1.42 1.42" />
-            <path d="m18.36 18.36 1.42 1.42" />
-            <path d="M1 12h2" />
-            <path d="M21 12h2" />
-            <path d="m4.22 19.78 1.42-1.42" />
-            <path d="m18.36 5.64 1.42-1.42" />
-          </svg>
+          <Sun size={20} />
         </div>
         <h2>Apparence</h2>
       </div>
@@ -197,45 +175,10 @@
           </div>
           <button class="theme-toggle" onclick={() => themeStore.toggle()}>
             {#if $themeStore.isDark}
-              <svg
-                class="theme-icon"
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-                ></path>
-              </svg>
+              <Moon size={16} class="theme-icon" />
               Mode Sombre
             {:else}
-              <svg
-                class="theme-icon"
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <circle cx="12" cy="12" r="5"></circle>
-                <path d="M12 1v2"></path>
-                <path d="M12 21v2"></path>
-                <path d="m4.22 4.22 1.42 1.42"></path>
-                <path d="m18.36 18.36 1.42 1.42"></path>
-                <path d="M1 12h2"></path>
-                <path d="M21 12h2"></path>
-                <path d="m4.22 19.78 1.42-1.42"></path>
-                <path d="m18.36 5.64 1.42-1.42"></path>
-              </svg>
+              <Sun size={16} class="theme-icon" />
               Mode Clair
             {/if}
           </button>
@@ -259,21 +202,7 @@
     <section class="settings-card">
       <div class="card-header">
         <div class="icon-wrapper ai">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-            <line x1="12" x2="12" y1="19" y2="22" />
-          </svg>
+          <Mic size={20} />
         </div>
         <h2>Configuration AI (Hugging Face)</h2>
       </div>
@@ -346,24 +275,7 @@
     <section class="settings-card">
       <div class="card-header">
         <div class="icon-wrapper system">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-            ></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
-            <polyline points="10 9 9 9 8 9"></polyline>
-          </svg>
+          <FileText size={20} />
         </div>
         <h2>Instructions Systeme</h2>
       </div>
@@ -396,23 +308,7 @@
     <section class="settings-card">
       <div class="card-header">
         <div class="icon-wrapper integration">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M16 22h2a2 2 0 0 0 2-2V7l-5-5H5a2 2 0 0 0-2 2v3.5" />
-            <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-            <path
-              d="M10.29 10.7a2.43 2.43 0 0 0-2.66-.52c-.29.12-.56.3-.78.53l-.35.34-.35-.34a2.43 2.43 0 0 0-2.65-.53c-.3.12-.56.3-.79.53-.95.94-1 2.53.2 3.74L6.5 18l3.6-3.55c1.2-1.21 1.14-2.8.19-3.74Z"
-            />
-          </svg>
+          <Heart size={20} />
         </div>
         <h2>Intégrations</h2>
       </div>
@@ -424,25 +320,7 @@
             notifications en temps réel.
           </p>
           <a href="/docs/integrations" class="docs-link">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path
-                d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-              />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="16" y1="13" x2="8" y2="13" />
-              <line x1="16" y1="17" x2="8" y2="17" />
-              <polyline points="10 9 9 9 8 9" />
-            </svg>
+            <FileText size={16} />
             Voir la documentation
           </a>
         </div>
@@ -501,35 +379,10 @@
                       {#if telegramTestStatus === "testing"}
                         Test...
                       {:else if telegramTestStatus === "success"}
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        >
-                          <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
+                        <Check size={14} />
                         Valide
                       {:else if telegramTestStatus === "error"}
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        >
-                          <line x1="18" y1="6" x2="6" y2="18"></line>
-                          <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
+                        <X size={14} />
                         Erreur
                       {:else}
                         Tester Bot
@@ -562,35 +415,10 @@
                       {#if telegramTestStatus === "testing"}
                         Envoi...
                       {:else if telegramTestStatus === "success"}
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        >
-                          <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
+                        <Check size={14} />
                         Envoyé
                       {:else if telegramTestStatus === "error"}
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        >
-                          <line x1="18" y1="6" x2="6" y2="18"></line>
-                          <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
+                        <X size={14} />
                         Échec
                       {:else}
                         Test Message
@@ -646,21 +474,10 @@
                     }
                   }}
                 >
-                  <svg
-                    class="help-icon"
-                    class:rotated={!isHelpCollapsed}
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M9 18l6-6-6-6"></path>
-                  </svg>
+                  <ChevronRight
+                    size={16}
+                    class={`help-icon ${!isHelpCollapsed ? "rotated" : ""}`}
+                  />
                   <span>Comment configurer ?</span>
                 </div>
 
@@ -825,11 +642,11 @@
     transform: translateX(-4px);
   }
 
-  .back-btn svg {
+  .back-btn :global(svg) {
     transition: transform 0.2s ease;
   }
 
-  .back-btn:hover svg {
+  .back-btn:hover :global(svg) {
     transform: translateX(-2px);
   }
 
@@ -1357,12 +1174,11 @@
     outline-offset: 2px;
   }
 
-  .help-icon {
+  :global(.help-icon) {
     transition: transform 0.3s ease;
-    color: var(--text-muted);
   }
 
-  .help-icon.rotated {
+  :global(.help-icon.rotated) {
     transform: rotate(90deg);
   }
 
@@ -1370,7 +1186,7 @@
     overflow: hidden;
   }
 
-  .help-title svg {
+  .help-title :global(svg) {
     color: #818cf8;
   }
 
