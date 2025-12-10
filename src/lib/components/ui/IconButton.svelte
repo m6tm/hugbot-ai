@@ -1,46 +1,46 @@
 <script lang="ts">
-  /**
-   * Composant IconButton - Bouton avec icone
-   */
-  type IconType =
-    | "menu"
-    | "send"
-    | "close"
-    | "settings"
-    | "sun"
-    | "moon"
-    | "copy"
-    | "check";
+/**
+ * Composant IconButton - Bouton avec icone
+ */
+type IconType =
+	| "menu"
+	| "send"
+	| "close"
+	| "settings"
+	| "sun"
+	| "moon"
+	| "copy"
+	| "check";
 
-  interface Props {
-    icon: IconType;
-    onclick?: () => void;
-    ariaLabel: string;
-    size?: "sm" | "md" | "lg";
-    variant?: "ghost" | "filled";
-    disabled?: boolean;
-  }
+interface Props {
+	icon: IconType;
+	onclick?: () => void;
+	ariaLabel: string;
+	size?: "sm" | "md" | "lg";
+	variant?: "ghost" | "filled";
+	disabled?: boolean;
+}
 
-  let {
-    icon,
-    onclick,
-    ariaLabel,
-    size = "md",
-    variant = "ghost",
-    disabled = false,
-  }: Props = $props();
+const {
+	icon,
+	onclick,
+	ariaLabel,
+	size = "md",
+	variant = "ghost",
+	disabled = false,
+}: Props = $props();
 
-  const sizes = {
-    sm: 28,
-    md: 36,
-    lg: 44,
-  };
+const sizes = {
+	sm: 28,
+	md: 36,
+	lg: 44,
+};
 
-  const iconSizes = {
-    sm: 16,
-    md: 20,
-    lg: 24,
-  };
+const iconSizes = {
+	sm: 16,
+	md: 20,
+	lg: 24,
+};
 </script>
 
 <button

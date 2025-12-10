@@ -1,24 +1,24 @@
 <script lang="ts">
-  /**
-   * Composant ChatArea - Zone principale de chat
-   */
-  import { chatStore, currentConversation, currentMessages } from "$lib/stores";
-  import MessageBubble from "./MessageBubble.svelte";
-  import ChatInput from "./ChatInput.svelte";
-  import WelcomeScreen from "./WelcomeScreen.svelte";
-  import ModelSelector from "./ModelSelector.svelte";
+/**
+ * Composant ChatArea - Zone principale de chat
+ */
+import { chatStore, currentConversation, currentMessages } from "$lib/stores";
+import ChatInput from "./ChatInput.svelte";
+import MessageBubble from "./MessageBubble.svelte";
+import ModelSelector from "./ModelSelector.svelte";
+import WelcomeScreen from "./WelcomeScreen.svelte";
 
-  let messagesContainer = $state<HTMLDivElement>();
+let messagesContainer = $state<HTMLDivElement>();
 
-  $effect(() => {
-    if ($currentMessages.length > 0 && messagesContainer) {
-      setTimeout(() => {
-        if (messagesContainer) {
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-      }, 100);
-    }
-  });
+$effect(() => {
+	if ($currentMessages.length > 0 && messagesContainer) {
+		setTimeout(() => {
+			if (messagesContainer) {
+				messagesContainer.scrollTop = messagesContainer.scrollHeight;
+			}
+		}, 100);
+	}
+});
 </script>
 
 <main class="chat-area">

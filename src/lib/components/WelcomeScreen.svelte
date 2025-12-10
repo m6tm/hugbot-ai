@@ -1,41 +1,41 @@
 <script lang="ts">
-  /**
-   * Composant WelcomeScreen - Ecran d'accueil
-   */
-  import { chatStore } from "$lib/stores";
-  import ModelSelector from "./ModelSelector.svelte";
+/**
+ * Composant WelcomeScreen - Ecran d'accueil
+ */
+import { chatStore } from "$lib/stores";
+import ModelSelector from "./ModelSelector.svelte";
 
-  const suggestions = [
-    {
-      icon: "code",
-      title: "Aide au code",
-      description: "Ecrivez du code Python pour resoudre un algorithme",
-    },
-    {
-      icon: "lightbulb",
-      title: "Idees creatives",
-      description: "Suggerez-moi des idees pour un projet innovant",
-    },
-    {
-      icon: "book",
-      title: "Apprentissage",
-      description: "Expliquez-moi les bases du machine learning",
-    },
-    {
-      icon: "message",
-      title: "Conversation",
-      description: "Aidez-moi a rediger un email professionnel",
-    },
-  ];
+const suggestions = [
+	{
+		icon: "code",
+		title: "Aide au code",
+		description: "Ecrivez du code Python pour resoudre un algorithme",
+	},
+	{
+		icon: "lightbulb",
+		title: "Idees creatives",
+		description: "Suggerez-moi des idees pour un projet innovant",
+	},
+	{
+		icon: "book",
+		title: "Apprentissage",
+		description: "Expliquez-moi les bases du machine learning",
+	},
+	{
+		icon: "message",
+		title: "Conversation",
+		description: "Aidez-moi a rediger un email professionnel",
+	},
+];
 
-  async function handleSuggestionClick(description: string) {
-    const conversation = await chatStore.createConversation();
-    if (conversation) {
-      setTimeout(() => {
-        chatStore.sendMessage(description);
-      }, 100);
-    }
-  }
+async function handleSuggestionClick(description: string) {
+	const conversation = await chatStore.createConversation();
+	if (conversation) {
+		setTimeout(() => {
+			chatStore.sendMessage(description);
+		}, 100);
+	}
+}
 </script>
 
 <div class="welcome-screen">

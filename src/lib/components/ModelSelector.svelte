@@ -1,26 +1,27 @@
 <script lang="ts">
-  /**
-   * Composant ModelSelector - Selecteur de modele AI
-   */
-  import { settingsStore } from "$lib/stores";
-  import { availableModels, type AIModel } from "$lib/config/models";
-  import { goto } from "$app/navigation";
+/**
+ * Composant ModelSelector - Selecteur de modele AI
+ */
 
-  let isOpen = $state(false);
+import { goto } from "$app/navigation";
+import { type AIModel, availableModels } from "$lib/config/models";
+import { settingsStore } from "$lib/stores";
 
-  const currentModel = $derived(
-    availableModels.find((m) => m.id === $settingsStore.currentModelId) ||
-      availableModels[0]
-  );
+let isOpen = $state(false);
 
-  function selectModel(model: AIModel) {
-    settingsStore.setModel(model.id);
-    isOpen = false;
-  }
+const currentModel = $derived(
+	availableModels.find((m) => m.id === $settingsStore.currentModelId) ||
+		availableModels[0],
+);
 
-  function toggleDropdown() {
-    isOpen = !isOpen;
-  }
+function selectModel(model: AIModel) {
+	settingsStore.setModel(model.id);
+	isOpen = false;
+}
+
+function toggleDropdown() {
+	isOpen = !isOpen;
+}
 </script>
 
 <div class="model-selector">

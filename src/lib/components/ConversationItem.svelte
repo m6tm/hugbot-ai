@@ -1,85 +1,85 @@
 <script lang="ts">
-  /**
-   * Composant ConversationItem - Item de conversation dans la sidebar
-   */
-  import type { Conversation } from "$lib/domain/entities/conversation";
-  import { chatStore } from "$lib/stores";
-  import ConfirmModal from "./ui/ConfirmModal.svelte";
+/**
+ * Composant ConversationItem - Item de conversation dans la sidebar
+ */
+import type { Conversation } from "$lib/domain/entities/conversation";
+import { chatStore } from "$lib/stores";
+import ConfirmModal from "./ui/ConfirmModal.svelte";
 
-  interface Props {
-    conversation: Conversation;
-    isActive?: boolean;
-  }
+interface Props {
+	conversation: Conversation;
+	isActive?: boolean;
+}
 
-  let { conversation, isActive = false }: Props = $props();
+const { conversation, isActive = false }: Props = $props();
 
-  let isEditing = $state(false);
-  let editTitle = $state("");
-  let showMenu = $state(false);
-  let showDeleteConfirm = $state(false);
+let isEditing = $state(false);
+let editTitle = $state("");
+let showMenu = $state(false);
+let showDeleteConfirm = $state(false);
 
-  function handleSelect() {
-    if (!isEditing) {
-      chatStore.selectConversation(conversation.id);
-    }
-  }
+function handleSelect() {
+	if (!isEditing) {
+		chatStore.selectConversation(conversation.id);
+	}
+}
 
-  function requestDelete(e: MouseEvent) {
-    e.stopPropagation();
-    showMenu = false;
-    showDeleteConfirm = true;
-  }
+function requestDelete(e: MouseEvent) {
+	e.stopPropagation();
+	showMenu = false;
+	showDeleteConfirm = true;
+}
 
-  function confirmDelete() {
-    chatStore.deleteConversation(conversation.id);
-    showDeleteConfirm = false;
-  }
+function confirmDelete() {
+	chatStore.deleteConversation(conversation.id);
+	showDeleteConfirm = false;
+}
 
-  function cancelDelete() {
-    showDeleteConfirm = false;
-  }
+function cancelDelete() {
+	showDeleteConfirm = false;
+}
 
-  function startEditing(e: MouseEvent) {
-    e.stopPropagation();
-    editTitle = conversation.title;
-    isEditing = true;
-    showMenu = false;
-  }
+function startEditing(e: MouseEvent) {
+	e.stopPropagation();
+	editTitle = conversation.title;
+	isEditing = true;
+	showMenu = false;
+}
 
-  async function saveEdit() {
-    if (editTitle.trim() && editTitle !== conversation.title) {
-      await chatStore.renameConversation(conversation.id, editTitle.trim());
-    }
-    isEditing = false;
-  }
+async function saveEdit() {
+	if (editTitle.trim() && editTitle !== conversation.title) {
+		await chatStore.renameConversation(conversation.id, editTitle.trim());
+	}
+	isEditing = false;
+}
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === "Enter") {
-      saveEdit();
-    } else if (e.key === "Escape") {
-      isEditing = false;
-    }
-  }
+function handleKeydown(e: KeyboardEvent) {
+	if (e.key === "Enter") {
+		saveEdit();
+	} else if (e.key === "Escape") {
+		isEditing = false;
+	}
+}
 
-  function formatDate(date: Date): string {
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+function formatDate(date: Date): string {
+	const now = new Date();
+	const diff = now.getTime() - date.getTime();
+	const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-    if (days === 0) return "Aujourd'hui";
-    if (days === 1) return "Hier";
-    if (days < 7) return `Il y a ${days} jours`;
+	if (days === 0) return "Aujourd'hui";
+	if (days === 1) return "Hier";
+	if (days < 7) return `Il y a ${days} jours`;
 
-    return date.toLocaleDateString("fr-FR", {
-      day: "numeric",
-      month: "short",
-    });
-  }
+	return date.toLocaleDateString("fr-FR", {
+		day: "numeric",
+		month: "short",
+	});
+}
 
-  function toggleMenu(e: MouseEvent) {
-    e.stopPropagation();
-    showMenu = !showMenu;
-  }
+function toggleMenu(e: MouseEvent) {
+	e.stopPropagation();
+	showMenu = !showMenu;
+}
 </script>
 
 <ConfirmModal

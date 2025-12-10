@@ -1,260 +1,275 @@
 <script lang="ts">
-  /**
-   * Composant pour tester les intégrations Telegram
-   */
-  import { integrationsStore } from "$lib/stores";
-  import { telegramService } from "$lib/services/telegram.service";
-  import { onMount } from "svelte";
+/**
+ * Composant pour tester les intégrations Telegram
+ */
 
-  let botToken = $state("");
-  let chatId = $state("");
-  let customTestMessage = $state("🤖 Test de connexion ChatAI");
-  let testStatus = $state<"idle" | "testing" | "success" | "error">("idle");
-  let testResult = $state("");
-  let isConnected = $state(false);
+import { onMount } from "svelte";
+import { telegramService } from "$lib/services/telegram.service";
+import { integrationsStore } from "$lib/stores";
 
-  // Fonctions de test définies en avance pour référence
-  async function runTestConnection() {
-    await testConnection();
-  }
+let botToken = $state("");
+let chatId = $state("");
+let customTestMessage = $state("🤖 Test de connexion ChatAI");
+let testStatus = $state<"idle" | "testing" | "success" | "error">("idle");
+let testResult = $state("");
+let isConnected = $state(false);
 
-  async function runTestMessageSend() {
-    await testMessageSend();
-  }
+// Fonctions de test définies en avance pour référence
+async function runTestConnection() {
+	await testConnection();
+}
 
-  async function runTestNewConversation() {
-    await testNewConversation();
-  }
+async function runTestMessageSend() {
+	await testMessageSend();
+}
 
-  async function runTestError() {
-    await testError();
-  }
+async function runTestNewConversation() {
+	await testNewConversation();
+}
 
-  async function runTestSystemStatus() {
-    await testSystemStatus();
-  }
+async function runTestError() {
+	await testError();
+}
 
-  // Types de tests disponibles
-  const testTypes: Array<{id: string; name: string; description: string; action: () => Promise<void>}> = [
-    {
-      id: "connection",
-      name: "Test de connexion",
-      description: "Vérifie si le bot est valide",
-      action: runTestConnection
-    },
-    {
-      id: "message",
-      name: "Test de message",
-      description: "Envoie un message de test",
-      action: runTestMessageSend
-    },
-    {
-      id: "newConversation",
-      name: "Simulation nouvelle conversation",
-      description: "Simule une notification de nouvelle conversation",
-      action: runTestNewConversation
-    },
-    {
-      id: "error",
-      name: "Simulation d'erreur",
-      description: "Simule une notification d'erreur",
-      action: runTestError
-    },
-    {
-      id: "systemStatus",
-      name: "Statut système",
-      description: "Envoie un statut système",
-      action: runTestSystemStatus
-    }
-  ];
+async function runTestSystemStatus() {
+	await testSystemStatus();
+}
 
-  onMount(() => {
-    // Charger la configuration actuelle
-    const integrations = $integrationsStore;
-    botToken = integrations.telegram.botToken;
-    chatId = integrations.telegram.chatId;
-  });
+// Types de tests disponibles
+const testTypes: Array<{
+	id: string;
+	name: string;
+	description: string;
+	action: () => Promise<void>;
+}> = [
+	{
+		id: "connection",
+		name: "Test de connexion",
+		description: "Vérifie si le bot est valide",
+		action: runTestConnection,
+	},
+	{
+		id: "message",
+		name: "Test de message",
+		description: "Envoie un message de test",
+		action: runTestMessageSend,
+	},
+	{
+		id: "newConversation",
+		name: "Simulation nouvelle conversation",
+		description: "Simule une notification de nouvelle conversation",
+		action: runTestNewConversation,
+	},
+	{
+		id: "error",
+		name: "Simulation d'erreur",
+		description: "Simule une notification d'erreur",
+		action: runTestError,
+	},
+	{
+		id: "systemStatus",
+		name: "Statut système",
+		description: "Envoie un statut système",
+		action: runTestSystemStatus,
+	},
+];
 
-  async function testConnection() {
-    if (!botToken) return;
+onMount(() => {
+	// Charger la configuration actuelle
+	const integrations = $integrationsStore;
+	botToken = integrations.telegram.botToken;
+	chatId = integrations.telegram.chatId;
+});
 
-    testStatus = "testing";
-    testResult = "Vérification du bot...";
+async function testConnection() {
+	if (!botToken) return;
 
-    try {
-      const success = await integrationsStore.testTelegramConnection(botToken);
-      if (success) {
-        testStatus = "success";
-        testResult = "✅ Bot valide et opérationnel";
-        isConnected = true;
-      } else {
-        testStatus = "error";
-        testResult = "❌ Bot invalide ou inaccessible";
-        isConnected = false;
-      }
-    } catch (error) {
-      testStatus = "error";
-      testResult = `❌ Erreur: ${(error as Error).message}`;
-      isConnected = false;
-    }
+	testStatus = "testing";
+	testResult = "Vérification du bot...";
 
-    setTimeout(resetTest, 3000);
-  }
+	try {
+		const success = await integrationsStore.testTelegramConnection(botToken);
+		if (success) {
+			testStatus = "success";
+			testResult = "✅ Bot valide et opérationnel";
+			isConnected = true;
+		} else {
+			testStatus = "error";
+			testResult = "❌ Bot invalide ou inaccessible";
+			isConnected = false;
+		}
+	} catch (error) {
+		testStatus = "error";
+		testResult = `❌ Erreur: ${(error as Error).message}`;
+		isConnected = false;
+	}
 
-  async function testMessageSend() {
-    if (!botToken || !chatId) return;
+	setTimeout(resetTest, 3000);
+}
 
-    testStatus = "testing";
-    testResult = "Envoi du message...";
+async function testMessageSend() {
+	if (!botToken || !chatId) return;
 
-    try {
-      await telegramService.updateConfig({
-        enabled: true,
-        botToken,
-        chatId,
-        sendOnNewMessage: true,
-        sendOnError: true
-      });
+	testStatus = "testing";
+	testResult = "Envoi du message...";
 
-      const success = await telegramService.sendNotification(customTestMessage);
-      if (success) {
-        testStatus = "success";
-        testResult = "✅ Message envoyé avec succès";
-      } else {
-        testStatus = "error";
-        testResult = "❌ Échec de l'envoi du message";
-      }
-    } catch (error) {
-      testStatus = "error";
-      testResult = `❌ Erreur: ${(error as Error).message}`;
-    }
+	try {
+		await telegramService.updateConfig({
+			enabled: true,
+			botToken,
+			chatId,
+			sendOnNewMessage: true,
+			sendOnError: true,
+		});
 
-    setTimeout(resetTest, 3000);
-  }
+		const success = await telegramService.sendNotification(customTestMessage);
+		if (success) {
+			testStatus = "success";
+			testResult = "✅ Message envoyé avec succès";
+		} else {
+			testStatus = "error";
+			testResult = "❌ Échec de l'envoi du message";
+		}
+	} catch (error) {
+		testStatus = "error";
+		testResult = `❌ Erreur: ${(error as Error).message}`;
+	}
 
-  async function testNewConversation() {
-    if (!botToken || !chatId) return;
+	setTimeout(resetTest, 3000);
+}
 
-    testStatus = "testing";
-    testResult = "Envoi de simulation...";
+async function testNewConversation() {
+	if (!botToken || !chatId) return;
 
-    try {
-      await telegramService.updateConfig({
-        enabled: true,
-        botToken,
-        chatId,
-        sendOnNewMessage: true,
-        sendOnError: true
-      });
+	testStatus = "testing";
+	testResult = "Envoi de simulation...";
 
-      const success = await telegramService.notifyNewMessage(
-        "Comment créer une API REST en Node.js ?",
-        "Pour créer une API REST en Node.js, vous devez d'abord installer Express.js qui est un framework web rapide et minimaliste..."
-      );
+	try {
+		await telegramService.updateConfig({
+			enabled: true,
+			botToken,
+			chatId,
+			sendOnNewMessage: true,
+			sendOnError: true,
+		});
 
-      if (success) {
-        testStatus = "success";
-        testResult = "✅ Notification de conversation envoyée";
-      } else {
-        testStatus = "error";
-        testResult = "❌ Échec de l'envoi de la notification";
-      }
-    } catch (error) {
-      testStatus = "error";
-      testResult = `❌ Erreur: ${(error as Error).message}`;
-    }
+		const success = await telegramService.notifyNewMessage(
+			"Comment créer une API REST en Node.js ?",
+			"Pour créer une API REST en Node.js, vous devez d'abord installer Express.js qui est un framework web rapide et minimaliste...",
+		);
 
-    setTimeout(resetTest, 3000);
-  }
+		if (success) {
+			testStatus = "success";
+			testResult = "✅ Notification de conversation envoyée";
+		} else {
+			testStatus = "error";
+			testResult = "❌ Échec de l'envoi de la notification";
+		}
+	} catch (error) {
+		testStatus = "error";
+		testResult = `❌ Erreur: ${(error as Error).message}`;
+	}
 
-  async function testError() {
-    if (!botToken || !chatId) return;
+	setTimeout(resetTest, 3000);
+}
 
-    testStatus = "testing";
-    testResult = "Envoi de simulation d'erreur...";
+async function testError() {
+	if (!botToken || !chatId) return;
 
-    try {
-      await telegramService.updateConfig({
-        enabled: true,
-        botToken,
-        chatId,
-        sendOnNewMessage: true,
-        sendOnError: true
-      });
+	testStatus = "testing";
+	testResult = "Envoi de simulation d'erreur...";
 
-      const success = await telegramService.notifyError(
-        "Clé API Hugging Face invalide",
-        "Envoi de message"
-      );
+	try {
+		await telegramService.updateConfig({
+			enabled: true,
+			botToken,
+			chatId,
+			sendOnNewMessage: true,
+			sendOnError: true,
+		});
 
-      if (success) {
-        testStatus = "success";
-        testResult = "✅ Notification d'erreur envoyée";
-      } else {
-        testStatus = "error";
-        testResult = "❌ Échec de l'envoi de la notification d'erreur";
-      }
-    } catch (error) {
-      testStatus = "error";
-      testResult = `❌ Erreur: ${(error as Error).message}`;
-    }
+		const success = await telegramService.notifyError(
+			"Clé API Hugging Face invalide",
+			"Envoi de message",
+		);
 
-    setTimeout(resetTest, 3000);
-  }
+		if (success) {
+			testStatus = "success";
+			testResult = "✅ Notification d'erreur envoyée";
+		} else {
+			testStatus = "error";
+			testResult = "❌ Échec de l'envoi de la notification d'erreur";
+		}
+	} catch (error) {
+		testStatus = "error";
+		testResult = `❌ Erreur: ${(error as Error).message}`;
+	}
 
-  async function testSystemStatus() {
-    if (!botToken || !chatId) return;
+	setTimeout(resetTest, 3000);
+}
 
-    testStatus = "testing";
-    testResult = "Envoi de statut système...";
+async function testSystemStatus() {
+	if (!botToken || !chatId) return;
 
-    try {
-      await telegramService.updateConfig({
-        enabled: true,
-        botToken,
-        chatId,
-        sendOnNewMessage: true,
-        sendOnError: true
-      });
+	testStatus = "testing";
+	testResult = "Envoi de statut système...";
 
-      const success = await telegramService.notifySystemStatus(
-        "online",
-        "Système ChatAI opérationnel et prêt à traiter vos demandes."
-      );
+	try {
+		await telegramService.updateConfig({
+			enabled: true,
+			botToken,
+			chatId,
+			sendOnNewMessage: true,
+			sendOnError: true,
+		});
 
-      if (success) {
-        testStatus = "success";
-        testResult = "✅ Statut système envoyé";
-      } else {
-        testStatus = "error";
-        testResult = "❌ Échec de l'envoi du statut";
-      }
-    } catch (error) {
-      testStatus = "error";
-      testResult = `❌ Erreur: ${(error as Error).message}`;
-    }
+		const success = await telegramService.notifySystemStatus(
+			"online",
+			"Système ChatAI opérationnel et prêt à traiter vos demandes.",
+		);
 
-    setTimeout(resetTest, 3000);
-  }
+		if (success) {
+			testStatus = "success";
+			testResult = "✅ Statut système envoyé";
+		} else {
+			testStatus = "error";
+			testResult = "❌ Échec de l'envoi du statut";
+		}
+	} catch (error) {
+		testStatus = "error";
+		testResult = `❌ Erreur: ${(error as Error).message}`;
+	}
 
-  function resetTest() {
-    testStatus = "idle";
-    testResult = "";
-  }
+	setTimeout(resetTest, 3000);
+}
 
-  function updateStore() {
-    integrationsStore.setTelegramConfig({
-      botToken,
-      chatId
-    });
-  }
+function resetTest() {
+	testStatus = "idle";
+	testResult = "";
+}
+
+function updateStore() {
+	integrationsStore.setTelegramConfig({
+		botToken,
+		chatId,
+	});
+}
 </script>
 
 <div class="telegram-tester">
   <div class="tester-header">
     <div class="header-icon">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.93 1.23-5.46 3.61-.52.36-.99.53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.37-.49 1.02-.74 4.02-1.76 6.7-2.92 8.03-3.49 3.82-1.58 4.62-1.85 5.14-1.86.11 0 .37.03.53.16.14.11.18.26.2.37.02.06.04.19.02.3z" fill="currentColor"/>
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.93 1.23-5.46 3.61-.52.36-.99.53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.37-.49 1.02-.74 4.02-1.76 6.7-2.92 8.03-3.49 3.82-1.58 4.62-1.85 5.14-1.86.11 0 .37.03.53.16.14.11.18.26.2.37.02.06.04.19.02.3z"
+          fill="currentColor"
+        />
       </svg>
     </div>
     <div>
@@ -314,7 +329,8 @@
           <button
             class="test-btn"
             onclick={test.action}
-            disabled={testStatus === "testing" || (test.id !== "connection" && !isConnected)}
+            disabled={testStatus === "testing" ||
+              (test.id !== "connection" && !isConnected)}
           >
             {#if testStatus === "testing"}
               <div class="spinner"></div>
@@ -329,7 +345,11 @@
   </div>
 
   {#if testResult}
-    <div class="test-result" class:success={testStatus === "success"} class:error={testStatus === "error"}>
+    <div
+      class="test-result"
+      class:success={testStatus === "success"}
+      class:error={testStatus === "error"}
+    >
       <div class="result-content">
         {testResult}
       </div>
@@ -349,7 +369,8 @@
         <strong>3. Tests :</strong> Testez les différents types de notifications
       </div>
       <div class="help-item">
-        <strong>💡 Astuce :</strong> Utilisez @userinfobot pour obtenir votre Chat ID
+        <strong>💡 Astuce :</strong> Utilisez @userinfobot pour obtenir votre Chat
+        ID
       </div>
     </div>
   </div>
@@ -563,8 +584,12 @@
   }
 
   @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
 
   .test-result {

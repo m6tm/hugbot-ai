@@ -5,28 +5,28 @@
 import type { Conversation } from "../entities/conversation";
 
 export interface StoragePort {
-  /**
-   * Sauvegarde une conversation
-   */
-  saveConversation(conversation: Conversation): Promise<void>;
+	/**
+	 * Sauvegarde une conversation
+	 */
+	saveConversation(conversation: Conversation): Promise<void>;
 
-  /**
-   * Recupere une conversation par son ID
-   */
-  getConversation(id: string): Promise<Conversation | null>;
+	/**
+	 * Recupere une conversation par son ID
+	 */
+	getConversation(id: string): Promise<Conversation | null>;
 
-  /**
-   * Recupere toutes les conversations
-   */
-  getAllConversations(): Promise<Conversation[]>;
+	/**
+	 * Recupere toutes les conversations
+	 */
+	getAllConversations(): Promise<Conversation[]>;
 
-  /**
-   * Supprime une conversation
-   */
-  deleteConversation(id: string): Promise<void>;
+	/**
+	 * Supprime une conversation
+	 */
+	deleteConversation(id: string): Promise<void>;
 
-  /**
-   * Met a jour une conversation
-   */
-  updateConversation(conversation: Conversation): Promise<void>;
+	/**
+	 * Met a jour une conversation
+	 */
+	updateConversation(conversation: Conversation): Promise<void>;
 }

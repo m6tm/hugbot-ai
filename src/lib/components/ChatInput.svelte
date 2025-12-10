@@ -1,44 +1,44 @@
 <script lang="ts">
-  /**
-   * Composant ChatInput - Zone de saisie du message
-   */
-  import { chatStore } from "$lib/stores";
-  import IconButton from "./ui/IconButton.svelte";
+/**
+ * Composant ChatInput - Zone de saisie du message
+ */
+import { chatStore } from "$lib/stores";
+import IconButton from "./ui/IconButton.svelte";
 
-  let message = $state("");
-  let textareaRef: HTMLTextAreaElement;
+let message = $state("");
+let textareaRef: HTMLTextAreaElement;
 
-  const isDisabled = $derived($chatStore.isStreaming || !message.trim());
+const isDisabled = $derived($chatStore.isStreaming || !message.trim());
 
-  function handleSubmit(e?: SubmitEvent) {
-    e?.preventDefault();
-    if (isDisabled) return;
+function handleSubmit(e?: SubmitEvent) {
+	e?.preventDefault();
+	if (isDisabled) return;
 
-    const content = message.trim();
-    if (!content) return;
+	const content = message.trim();
+	if (!content) return;
 
-    message = "";
-    resetTextareaHeight();
-    chatStore.sendMessage(content);
-  }
+	message = "";
+	resetTextareaHeight();
+	chatStore.sendMessage(content);
+}
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
-    }
-  }
+function handleKeydown(e: KeyboardEvent) {
+	if (e.key === "Enter" && !e.shiftKey) {
+		e.preventDefault();
+		handleSubmit();
+	}
+}
 
-  function adjustTextareaHeight() {
-    if (!textareaRef) return;
-    textareaRef.style.height = "auto";
-    textareaRef.style.height = Math.min(textareaRef.scrollHeight, 200) + "px";
-  }
+function adjustTextareaHeight() {
+	if (!textareaRef) return;
+	textareaRef.style.height = "auto";
+	textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`;
+}
 
-  function resetTextareaHeight() {
-    if (!textareaRef) return;
-    textareaRef.style.height = "auto";
-  }
+function resetTextareaHeight() {
+	if (!textareaRef) return;
+	textareaRef.style.height = "auto";
+}
 </script>
 
 <form class="chat-input-container" onsubmit={handleSubmit}>

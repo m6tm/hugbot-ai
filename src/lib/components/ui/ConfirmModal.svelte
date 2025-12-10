@@ -1,41 +1,41 @@
 <script lang="ts">
-  /**
-   * Composant ConfirmModal - Boite de dialogue de confirmation
-   */
+/**
+ * Composant ConfirmModal - Boite de dialogue de confirmation
+ */
 
-  interface Props {
-    isOpen: boolean;
-    title: string;
-    message: string;
-    confirmText?: string;
-    cancelText?: string;
-    variant?: "danger" | "warning" | "info";
-    onConfirm: () => void;
-    onCancel: () => void;
-  }
+interface Props {
+	isOpen: boolean;
+	title: string;
+	message: string;
+	confirmText?: string;
+	cancelText?: string;
+	variant?: "danger" | "warning" | "info";
+	onConfirm: () => void;
+	onCancel: () => void;
+}
 
-  let {
-    isOpen,
-    title,
-    message,
-    confirmText = "Confirmer",
-    cancelText = "Annuler",
-    variant = "danger",
-    onConfirm,
-    onCancel,
-  }: Props = $props();
+const {
+	isOpen,
+	title,
+	message,
+	confirmText = "Confirmer",
+	cancelText = "Annuler",
+	variant = "danger",
+	onConfirm,
+	onCancel,
+}: Props = $props();
 
-  function handleBackdropClick(e: MouseEvent) {
-    if (e.target === e.currentTarget) {
-      onCancel();
-    }
-  }
+function handleBackdropClick(e: MouseEvent) {
+	if (e.target === e.currentTarget) {
+		onCancel();
+	}
+}
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === "Escape") {
-      onCancel();
-    }
-  }
+function handleKeydown(e: KeyboardEvent) {
+	if (e.key === "Escape") {
+		onCancel();
+	}
+}
 </script>
 
 <svelte:window onkeydown={handleKeydown} />

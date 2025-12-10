@@ -1,40 +1,40 @@
 <script lang="ts">
-  import { settingsStore } from "$lib/stores";
-  import hljs from "highlight.js";
+import hljs from "highlight.js";
+import { settingsStore } from "$lib/stores";
 
-  interface Props {
-    code: string;
-    language?: string;
-  }
+interface Props {
+	code: string;
+	language?: string;
+}
 
-  let { code, language = "plaintext" } = $props();
+const { code, language = "plaintext" } = $props();
 
-  let copied = $state(false);
+let copied = $state(false);
 
-  const detectedLanguage = $derived(
-    language && hljs.getLanguage(language) ? language : "plaintext"
-  );
+const detectedLanguage = $derived(
+	language && hljs.getLanguage(language) ? language : "plaintext",
+);
 
-  const highlighted = $derived(
-    hljs.highlight(code, { language: detectedLanguage }).value
-  );
+const highlighted = $derived(
+	hljs.highlight(code, { language: detectedLanguage }).value,
+);
 
-  const languageLabel = $derived(language || "code");
+const languageLabel = $derived(language || "code");
 
-  function cycleCodeTheme() {
-    const themes = ["tokyo-night", "github-dark", "dracula"];
-    const current = $settingsStore.codeTheme;
-    const nextIndex = (themes.indexOf(current) + 1) % themes.length;
-    settingsStore.setCodeTheme(themes[nextIndex]);
-  }
+function cycleCodeTheme() {
+	const themes = ["tokyo-night", "github-dark", "dracula"];
+	const current = $settingsStore.codeTheme;
+	const nextIndex = (themes.indexOf(current) + 1) % themes.length;
+	settingsStore.setCodeTheme(themes[nextIndex]);
+}
 
-  function copyToClipboard() {
-    navigator.clipboard.writeText(code);
-    copied = true;
-    setTimeout(() => {
-      copied = false;
-    }, 2000);
-  }
+function copyToClipboard() {
+	navigator.clipboard.writeText(code);
+	copied = true;
+	setTimeout(() => {
+		copied = false;
+	}, 2000);
+}
 </script>
 
 <div class="code-block {$settingsStore.codeTheme}">

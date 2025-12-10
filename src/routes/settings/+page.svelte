@@ -1,146 +1,178 @@
 <script lang="ts">
-  /**
-   * Page des parametres
-   */
-  import { settingsStore, themeStore, integrationsStore } from "$lib/stores";
-  import { goto } from "$app/navigation";
-  import { onMount } from "svelte";
-  import { slide } from "svelte/transition";
-  import {
-    ArrowLeft,
-    Sun,
-    Moon,
-    Mic,
-    FileText,
-    Heart,
-    Check,
-    X,
-    ChevronRight,
-  } from "lucide-svelte";
+/**
+ * Page des parametres
+ */
 
-  let apiKey = $state("");
-  let temperature = $state(0.7);
-  let maxTokens = $state(1024);
-  let codeTheme = $state("tokyo-night");
-  let systemInstruction = $state("");
-  let isSaved = $state(false);
-  let isTelegramSaved = $state(false);
+import {
+	ArrowLeft,
+	Check,
+	ChevronRight,
+	Database,
+	FileText,
+	Heart,
+	Loader2,
+	Mic,
+	Moon,
+	Sun,
+	X,
+} from "lucide-svelte";
+import { onMount } from "svelte";
+import { slide } from "svelte/transition";
+import { goto } from "$app/navigation";
+import { RAGService } from "$lib/ai/rag";
+import { integrationsStore, settingsStore, themeStore } from "$lib/stores";
 
-  // Variables pour les intégrations
-  let telegramEnabled = $state(false);
-  let telegramBotToken = $state("");
-  let telegramChatId = $state("");
-  let telegramSendOnNewMessage = $state(true);
-  let telegramSendOnError = $state(true);
-  let telegramTestStatus = $state<"idle" | "testing" | "success" | "error">(
-    "idle"
-  );
+let apiKey = $state("");
+let temperature = $state(0.7);
+let maxTokens = $state(1024);
+let codeTheme = $state("tokyo-night");
+let systemInstruction = $state("");
+let isSaved = $state(false);
+let isTelegramSaved = $state(false);
 
-  onMount(async () => {
-    // Initialiser et charger les valeurs actuelles
-    await integrationsStore.init();
+// Variables pour les intégrations
+let telegramEnabled = $state(false);
+let telegramBotToken = $state("");
+let telegramChatId = $state("");
+let telegramSendOnNewMessage = $state(true);
+let telegramSendOnError = $state(true);
+let telegramTestStatus = $state<"idle" | "testing" | "success" | "error">(
+	"idle",
+);
 
-    apiKey = $settingsStore.apiKey;
-    temperature = $settingsStore.temperature;
-    maxTokens = $settingsStore.maxTokens;
-    codeTheme = $settingsStore.codeTheme;
-    systemInstruction = $settingsStore.systemInstruction;
+// Variables Knowledge Base
+let kbText = $state("");
+let isIndexing = $state(false);
+let kbSuccess = $state(false);
 
-    // Charger les intégrations
-    const integrations = $integrationsStore;
-    telegramEnabled = integrations.telegram.enabled;
-    telegramBotToken = integrations.telegram.botToken;
-    telegramChatId = integrations.telegram.chatId;
-    telegramSendOnNewMessage = integrations.telegram.sendOnNewMessage;
-    telegramSendOnError = integrations.telegram.sendOnError;
-  });
+onMount(async () => {
+	// Initialiser et charger les valeurs actuelles
+	await integrationsStore.init();
 
-  function handleSave() {
-    settingsStore.setApiKey(apiKey);
-    settingsStore.setTemperature(temperature);
-    settingsStore.setMaxTokens(maxTokens);
-    settingsStore.setCodeTheme(codeTheme);
-    settingsStore.setSystemInstruction(systemInstruction);
+	apiKey = $settingsStore.apiKey;
+	temperature = $settingsStore.temperature;
+	maxTokens = $settingsStore.maxTokens;
+	codeTheme = $settingsStore.codeTheme;
+	systemInstruction = $settingsStore.systemInstruction;
 
-    isSaved = true;
-    setTimeout(() => {
-      isSaved = false;
-    }, 3000);
-  }
+	// Charger les intégrations
+	const integrations = $integrationsStore;
+	telegramEnabled = integrations.telegram.enabled;
+	telegramBotToken = integrations.telegram.botToken;
+	telegramChatId = integrations.telegram.chatId;
+	telegramSendOnNewMessage = integrations.telegram.sendOnNewMessage;
+	telegramSendOnError = integrations.telegram.sendOnError;
+});
 
-  function handleTelegramToggle() {
-    telegramEnabled = !telegramEnabled;
-    integrationsStore.toggleTelegram(telegramEnabled);
-  }
+function handleSave() {
+	settingsStore.setApiKey(apiKey);
+	settingsStore.setTemperature(temperature);
+	settingsStore.setMaxTokens(maxTokens);
+	settingsStore.setCodeTheme(codeTheme);
+	settingsStore.setSystemInstruction(systemInstruction);
 
-  function handleTelegramConfigSave() {
-    integrationsStore.setTelegramConfig({
-      botToken: telegramBotToken,
-      chatId: telegramChatId,
-      sendOnNewMessage: telegramSendOnNewMessage,
-      sendOnError: telegramSendOnError,
-    });
+	isSaved = true;
+	setTimeout(() => {
+		isSaved = false;
+	}, 3000);
+}
 
-    isTelegramSaved = true;
-    setTimeout(() => {
-      isTelegramSaved = false;
-    }, 3000);
-  }
+function handleTelegramToggle() {
+	telegramEnabled = !telegramEnabled;
+	integrationsStore.toggleTelegram(telegramEnabled);
+}
 
-  let telegramErrorMessage = $state("");
+function handleTelegramConfigSave() {
+	integrationsStore.setTelegramConfig({
+		botToken: telegramBotToken,
+		chatId: telegramChatId,
+		sendOnNewMessage: telegramSendOnNewMessage,
+		sendOnError: telegramSendOnError,
+	});
 
-  // État pour le collapse de l'aide
-  let isHelpCollapsed = $state(true);
+	isTelegramSaved = true;
+	setTimeout(() => {
+		isTelegramSaved = false;
+	}, 3000);
+}
 
-  async function testTelegramConnection() {
-    if (!telegramBotToken) return;
+let telegramErrorMessage = $state("");
 
-    telegramTestStatus = "testing";
-    telegramErrorMessage = "";
+// État pour le collapse de l'aide
+let isHelpCollapsed = $state(true);
 
-    const result =
-      await integrationsStore.testTelegramConnection(telegramBotToken);
+function toggleHelp() {
+	isHelpCollapsed = !isHelpCollapsed;
+}
 
-    if (result.ok) {
-      telegramTestStatus = "success";
-      if (result.bot?.username) {
-        telegramErrorMessage = `Bot @${result.bot.username} connecté`;
-      }
-    } else {
-      telegramTestStatus = "error";
-      telegramErrorMessage = result.error || "Erreur de connexion";
-    }
+async function testTelegramConnection() {
+	if (!telegramBotToken) return;
 
-    setTimeout(() => {
-      telegramTestStatus = "idle";
-      telegramErrorMessage = "";
-    }, 4000);
-  }
+	telegramTestStatus = "testing";
+	telegramErrorMessage = "";
 
-  async function sendTelegramTestMessage() {
-    if (!telegramBotToken || !telegramChatId) return;
+	const result =
+		await integrationsStore.testTelegramConnection(telegramBotToken);
 
-    telegramTestStatus = "testing";
-    telegramErrorMessage = "";
+	if (result.ok) {
+		telegramTestStatus = "success";
+		if (result.bot?.username) {
+			telegramErrorMessage = `Bot @${result.bot.username} connecté`;
+		}
+	} else {
+		telegramTestStatus = "error";
+		telegramErrorMessage = result.error || "Erreur de connexion";
+	}
 
-    const result = await integrationsStore.sendTelegramTestMessage(
-      telegramBotToken,
-      telegramChatId
-    );
+	setTimeout(() => {
+		telegramTestStatus = "idle";
+		telegramErrorMessage = "";
+	}, 4000);
+}
 
-    if (result.ok) {
-      telegramTestStatus = "success";
-      telegramErrorMessage = "Message envoyé !";
-    } else {
-      telegramTestStatus = "error";
-      telegramErrorMessage = result.error || "Échec de l'envoi";
-    }
+async function sendTelegramTestMessage() {
+	if (!telegramBotToken || !telegramChatId) return;
 
-    setTimeout(() => {
-      telegramTestStatus = "idle";
-      telegramErrorMessage = "";
-    }, 4000);
-  }
+	telegramTestStatus = "testing";
+	telegramErrorMessage = "";
+
+	const result = await integrationsStore.sendTelegramTestMessage(
+		telegramBotToken,
+		telegramChatId,
+	);
+
+	if (result.ok) {
+		telegramTestStatus = "success";
+		telegramErrorMessage = "Message envoyé !";
+	} else {
+		telegramTestStatus = "error";
+		telegramErrorMessage = result.error || "Échec de l'envoi";
+	}
+
+	setTimeout(() => {
+		telegramTestStatus = "idle";
+		telegramErrorMessage = "";
+	}, 4000);
+}
+
+async function handleAddDocument() {
+	if (!kbText.trim()) return;
+
+	isIndexing = true;
+	try {
+		const ragService = RAGService.getInstance();
+		await ragService.addDocument(kbText);
+		kbText = "";
+		kbSuccess = true;
+		setTimeout(() => {
+			kbSuccess = false;
+		}, 3000);
+	} catch (e) {
+		console.error("Indexing failed", e);
+	} finally {
+		isIndexing = false;
+	}
+}
 </script>
 
 <div class="settings-container">
@@ -298,6 +330,54 @@
             <div class="helper-text">
               Ces instructions seront envoyees a chaque debut de conversation
               pour guider l'IA.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section Knowledge Base -->
+    <section class="settings-card">
+      <div class="card-header">
+        <div class="icon-wrapper database">
+          <Database size={20} />
+        </div>
+        <h2>Base de Connaissance (RAG Local)</h2>
+      </div>
+
+      <div class="card-content">
+        <div class="setting-item full-width">
+          <div class="setting-label">
+            <span>Ajouter des documents</span>
+            <small
+              >Ces informations seront utilisées par l'IA pour répondre.</small
+            >
+          </div>
+          <div class="input-wrapper">
+            <textarea
+              bind:value={kbText}
+              class="text-area"
+              rows="6"
+              placeholder="Collez ici du texte ou de la documentation..."
+            ></textarea>
+
+            <div
+              class="button-group"
+              style="justify-content: flex-end; margin-top: 10px;"
+            >
+              <button
+                class="save-btn-small"
+                onclick={handleAddDocument}
+                disabled={isIndexing || !kbText}
+              >
+                {#if isIndexing}
+                  <Loader2 size={16} class="spin" /> Indexation...
+                {:else if kbSuccess}
+                  <Check size={16} /> Ajouté !
+                {:else}
+                  Ajouter à la base
+                {/if}
+              </button>
             </div>
           </div>
         </div>
@@ -705,6 +785,11 @@
   .icon-wrapper.integration {
     background: rgba(147, 51, 234, 0.1);
     color: #9333ea;
+  }
+
+  .icon-wrapper.database {
+    background: rgba(236, 72, 153, 0.1);
+    color: #ec4899;
   }
 
   h2 {

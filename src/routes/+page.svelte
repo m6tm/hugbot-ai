@@ -1,8 +1,8 @@
 <script lang="ts">
-  /**
-   * Page principale du Chat AI
-   */
-  import { Sidebar, ChatArea } from "$lib/components";
+/**
+ * Page principale du Chat AI
+ */
+import { ChatArea, Sidebar } from "$lib/components";
 </script>
 
 <div class="app-container">

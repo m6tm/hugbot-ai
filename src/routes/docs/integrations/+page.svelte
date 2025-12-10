@@ -1,16 +1,17 @@
 <script lang="ts">
-  /**
-   * Page de documentation des intégrations
-   */
-  import { goto } from "$app/navigation";
-  import CodeBlock from "$lib/components/CodeBlock.svelte";
-  import {
-    MessageCircle,
-    AlertTriangle,
-    Wrench,
-    BarChart3,
-    ArrowLeft,
-  } from "lucide-svelte";
+/**
+ * Page de documentation des intégrations
+ */
+
+import {
+	AlertTriangle,
+	ArrowLeft,
+	BarChart3,
+	MessageCircle,
+	Wrench,
+} from "lucide-svelte";
+import { goto } from "$app/navigation";
+import CodeBlock from "$lib/components/CodeBlock.svelte";
 </script>
 
 <div class="docs-container">

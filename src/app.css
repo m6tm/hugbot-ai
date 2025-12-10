@@ -1,315 +1,318 @@
 @import "tailwindcss";
 
 :root {
-  /* Couleurs de base (Mode Clair par defaut) */
-  --color-primary: #667eea;
-  --color-primary-dark: #5a67d8;
-  --color-accent: #764ba2;
+	/* Couleurs de base (Mode Clair par defaut) */
+	--color-primary: #667eea;
+	--color-primary-dark: #5a67d8;
+	--color-accent: #764ba2;
 
-  --bg-main: #f8fafc;
-  --bg-card: #ffffff;
-  --bg-input: #f1f5f9;
-  --bg-hover: #f1f5f9;
+	--bg-main: #f8fafc;
+	--bg-card: #ffffff;
+	--bg-input: #f1f5f9;
+	--bg-hover: #f1f5f9;
 
-  --text-main: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #64748b;
-  --text-dim: #94a3b8;
+	--text-main: #0f172a;
+	--text-secondary: #334155;
+	--text-muted: #64748b;
+	--text-dim: #94a3b8;
 
-  --border-color: #e2e8f0;
-  --border-hover: #cbd5e1;
+	--border-color: #e2e8f0;
+	--border-hover: #cbd5e1;
 
-  --bg-sidebar: #ffffff;
-  --bg-chat: #f8fafc;
-  --sidebar-border: #e2e8f0;
-  --scrollbar-thumb: #cbd5e1;
-  --bg-header: rgba(255, 255, 255, 0.8);
+	--bg-sidebar: #ffffff;
+	--bg-chat: #f8fafc;
+	--sidebar-border: #e2e8f0;
+	--scrollbar-thumb: #cbd5e1;
+	--bg-header: rgba(255, 255, 255, 0.8);
 }
 
 /* Mode Sombre */
 :root.dark {
-  --bg-main: #0f172a;
-  --bg-card: #1e293b;
-  --bg-input: #0f172a;
-  --bg-hover: #334155;
+	--bg-main: #0f172a;
+	--bg-card: #1e293b;
+	--bg-input: #0f172a;
+	--bg-hover: #334155;
 
-  --text-main: #f8fafc;
-  --text-secondary: #e2e8f0;
-  --text-muted: #94a3b8;
-  --text-dim: #6b7280;
+	--text-main: #f8fafc;
+	--text-secondary: #e2e8f0;
+	--text-muted: #94a3b8;
+	--text-dim: #6b7280;
 
-  --border-color: #334155;
-  --border-hover: #475569;
+	--border-color: #334155;
+	--border-hover: #475569;
 
-  --bg-sidebar: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-  --bg-chat: linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 100%);
-  --sidebar-border: rgba(255, 255, 255, 0.1);
-  --scrollbar-thumb: rgba(255, 255, 255, 0.2);
-  --bg-header: rgba(0, 0, 0, 0.2);
+	--bg-sidebar: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+	--bg-chat: linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 100%);
+	--sidebar-border: rgba(255, 255, 255, 0.1);
+	--scrollbar-thumb: rgba(255, 255, 255, 0.2);
+	--bg-header: rgba(0, 0, 0, 0.2);
 }
 
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
 }
 
 html,
 body {
-  height: 100%;
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-  background-color: var(--bg-main);
-  color: var(--text-main);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.3s ease, color 0.3s ease;
+	height: 100%;
+	font-family:
+		"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+		Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+	background-color: var(--bg-main);
+	color: var(--text-main);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	transition:
+		background-color 0.3s ease,
+		color 0.3s ease;
 }
 
 #app {
-  height: 100%;
+	height: 100%;
 }
 
 a {
-  color: var(--color-primary);
-  text-decoration: none;
-  transition: color 0.2s ease;
+	color: var(--color-primary);
+	text-decoration: none;
+	transition: color 0.2s ease;
 }
 
 a:hover {
-  color: var(--color-primary-dark);
+	color: var(--color-primary-dark);
 }
 
 button {
-  font-family: inherit;
+	font-family: inherit;
 }
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+	width: 8px;
+	height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+	background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
-  border-radius: 4px;
+	background: var(--scrollbar-thumb);
+	border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+	background: rgba(255, 255, 255, 0.3);
 }
 
 ::selection {
-  background: var(--color-primary);
-  color: white;
+	background: var(--color-primary);
+	color: white;
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 @keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+	from {
+		opacity: 0;
+		transform: translateX(-20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
 }
 
 @keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.5;
+	}
 }
 
 /* --- Code Block Utilities & Themes --- */
 
 /* Themes de coloration syntaxique */
 .tokyo-night {
-  --code-bg: #1a1b26;
-  --code-text: #a9b1d6;
-  --code-comment: #565f89;
-  --code-keyword: #bb9af7;
-  --code-string: #9ece6a;
-  --code-number: #ff9e64;
-  --code-function: #7aa2f7;
-  --code-class: #2ac3de;
-  --code-tag: #f7768e;
+	--code-bg: #1a1b26;
+	--code-text: #a9b1d6;
+	--code-comment: #565f89;
+	--code-keyword: #bb9af7;
+	--code-string: #9ece6a;
+	--code-number: #ff9e64;
+	--code-function: #7aa2f7;
+	--code-class: #2ac3de;
+	--code-tag: #f7768e;
 }
 
 .github-dark {
-  --code-bg: #0d1117;
-  --code-text: #c9d1d9;
-  --code-comment: #8b949e;
-  --code-keyword: #ff7b72;
-  --code-string: #a5d6ff;
-  --code-number: #79c0ff;
-  --code-function: #d2a8ff;
-  --code-class: #f0883e;
-  --code-tag: #7ee787;
+	--code-bg: #0d1117;
+	--code-text: #c9d1d9;
+	--code-comment: #8b949e;
+	--code-keyword: #ff7b72;
+	--code-string: #a5d6ff;
+	--code-number: #79c0ff;
+	--code-function: #d2a8ff;
+	--code-class: #f0883e;
+	--code-tag: #7ee787;
 }
 
 .dracula {
-  --code-bg: #282a36;
-  --code-text: #f8f8f2;
-  --code-comment: #6272a4;
-  --code-keyword: #ff79c6;
-  --code-string: #f1fa8c;
-  --code-number: #bd93f9;
-  --code-function: #50fa7b;
-  --code-class: #8be9fd;
-  --code-tag: #ffb86c;
+	--code-bg: #282a36;
+	--code-text: #f8f8f2;
+	--code-comment: #6272a4;
+	--code-keyword: #ff79c6;
+	--code-string: #f1fa8c;
+	--code-number: #bd93f9;
+	--code-function: #50fa7b;
+	--code-class: #8be9fd;
+	--code-tag: #ffb86c;
 }
 
 /* Styles des blocs de code */
 .code-block {
-  margin: 1em 0;
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--code-bg, #1a1b26);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  font-family: "Fira Code", "JetBrains Mono", monospace;
+	margin: 1em 0;
+	border-radius: 10px;
+	overflow: hidden;
+	background: var(--code-bg, #1a1b26);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	font-family: "Fira Code", "JetBrains Mono", monospace;
 }
 
 .code-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 8px 16px;
+	background: rgba(255, 255, 255, 0.05);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Increased specificity for code block header elements */
 .code-block .code-language {
-  font-size: 12px;
-  font-weight: 600;
-  color: #a5b4fc !important; /* Lighter indigo for better contrast */
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+	font-size: 12px;
+	font-weight: 600;
+	color: #a5b4fc; /* Lighter indigo for better contrast */
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
 }
 
 .code-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
 }
 
 .code-block .copy-code-btn,
 .code-block .theme-switch-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  color: #cbd5e1 !important; /* Light slate for better contrast */
-  font-size: 11px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 10px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 6px;
+	color: #cbd5e1; /* Light slate for better contrast */
+	font-size: 11px;
+	cursor: pointer;
+	transition: all 0.2s ease;
 }
 
 .code-block .theme-switch-btn {
-  padding: 4px 8px;
+	padding: 4px 8px;
 }
 
 .code-block .copy-code-btn:hover,
 .code-block .theme-switch-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white !important;
+	background: rgba(255, 255, 255, 0.1);
+	color: white;
 }
 
 .code-block pre {
-  margin: 0;
-  padding: 16px;
-  overflow-x: auto;
-  background: transparent;
-  border: none;
+	margin: 0;
+	padding: 16px;
+	overflow-x: auto;
+	background: transparent;
+	border: none;
 }
 
 .code-block code {
-  background: transparent;
-  padding: 0;
-  font-size: 0.85em;
-  line-height: 1.6;
-  color: var(--code-text, #e5e7eb);
+	background: transparent;
+	padding: 0;
+	font-size: 0.85em;
+	line-height: 1.6;
+	color: var(--code-text, #e5e7eb);
 }
 
 /* Highlight.js Mappings */
 .hljs-comment,
 .hljs-quote {
-  color: var(--code-comment);
-  font-style: italic;
+	color: var(--code-comment);
+	font-style: italic;
 }
 .hljs-keyword,
 .hljs-selector-tag {
-  color: var(--code-keyword);
+	color: var(--code-keyword);
 }
 .hljs-string,
 .hljs-template-variable,
 .hljs-addition {
-  color: var(--code-string);
+	color: var(--code-string);
 }
 .hljs-number,
 .hljs-literal {
-  color: var(--code-number);
+	color: var(--code-number);
 }
 .hljs-function,
 .hljs-title,
 .hljs-section {
-  color: var(--code-function);
+	color: var(--code-function);
 }
 .hljs-built_in {
-  color: var(--code-function);
+	color: var(--code-function);
 }
 .hljs-class .hljs-title,
 .hljs-type {
-  color: var(--code-class);
+	color: var(--code-class);
 }
 .hljs-variable {
-  color: var(--code-text);
+	color: var(--code-text);
 }
 .hljs-tag,
 .hljs-name,
 .hljs-attribute {
-  color: var(--code-tag);
+	color: var(--code-tag);
 }
 .hljs-attr {
-  color: var(--code-function);
+	color: var(--code-function);
 }
 .hljs-property {
-  color: var(--code-class);
+	color: var(--code-class);
 }
 .hljs-punctuation {
-  color: var(--code-text);
+	color: var(--code-text);
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.3s ease forwards;
+	animation: fadeIn 0.3s ease forwards;
 }
 
 .animate-slide-in {
-  animation: slideIn 0.3s ease forwards;
+	animation: slideIn 0.3s ease forwards;
 }
 
 .animate-pulse {
-  animation: pulse 2s ease-in-out infinite;
+	animation: pulse 2s ease-in-out infinite;
 }

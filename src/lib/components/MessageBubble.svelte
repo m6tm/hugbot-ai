@@ -1,31 +1,32 @@
 <script lang="ts">
-  /**
-   * Composant MessageBubble - Bulle de message
-   */
-  import { settingsStore } from "$lib/stores";
-  import type { Message } from "$lib/domain/entities/message";
-  import { marked, type Tokens } from "marked";
-  import hljs from "highlight.js";
+/**
+ * Composant MessageBubble - Bulle de message
+ */
 
-  interface Props {
-    message: Message;
-  }
+import hljs from "highlight.js";
+import { marked, type Tokens } from "marked";
+import type { Message } from "$lib/domain/entities/message";
+import { settingsStore } from "$lib/stores";
 
-  let { message }: Props = $props();
+interface Props {
+	message: Message;
+}
 
-  let copied = $state(false);
+const { message }: Props = $props();
 
-  const isUser = $derived(message.role === "user");
+let copied = $state(false);
 
-  // Renderer personnalise pour les blocs de code avec highlight.js
-  const renderer = new marked.Renderer();
+const isUser = $derived(message.role === "user");
 
-  renderer.code = ({ text, lang }: Tokens.Code) => {
-    const language = lang && hljs.getLanguage(lang) ? lang : "plaintext";
-    const highlighted = hljs.highlight(text, { language }).value;
-    const languageLabel = lang || "code";
+// Renderer personnalise pour les blocs de code avec highlight.js
+const renderer = new marked.Renderer();
 
-    return `<div class="code-block">
+renderer.code = ({ text, lang }: Tokens.Code) => {
+	const language = lang && hljs.getLanguage(lang) ? lang : "plaintext";
+	const highlighted = hljs.highlight(text, { language }).value;
+	const languageLabel = lang || "code";
+
+	return `<div class="code-block">
       <div class="code-header">
         <span class="code-language">${languageLabel}</span>
         <div class="code-actions">
@@ -49,61 +50,61 @@
       </div>
       <pre><code class="hljs language-${language}">${highlighted}</code></pre>
     </div>`;
-  };
+};
 
-  // Configuration de marked
-  marked.setOptions({
-    breaks: true,
-    gfm: true,
-  });
+// Configuration de marked
+marked.setOptions({
+	breaks: true,
+	gfm: true,
+});
 
-  marked.use({ renderer });
+marked.use({ renderer });
 
-  /**
-   * Parse le contenu markdown et retourne le HTML
-   */
-  function parseMarkdown(content: string): string {
-    if (isUser) {
-      return content;
-    }
-    return marked.parse(content) as string;
-  }
+/**
+ * Parse le contenu markdown et retourne le HTML
+ */
+function parseMarkdown(content: string): string {
+	if (isUser) {
+		return content;
+	}
+	return marked.parse(content) as string;
+}
 
-  const parsedContent = $derived(parseMarkdown(message.content));
+const parsedContent = $derived(parseMarkdown(message.content));
 
-  async function copyToClipboard() {
-    try {
-      await navigator.clipboard.writeText(message.content);
-      copied = true;
-      setTimeout(() => {
-        copied = false;
-      }, 2000);
-    } catch {
-      console.error("Impossible de copier le texte");
-    }
-  }
+async function copyToClipboard() {
+	try {
+		await navigator.clipboard.writeText(message.content);
+		copied = true;
+		setTimeout(() => {
+			copied = false;
+		}, 2000);
+	} catch {
+		console.error("Impossible de copier le texte");
+	}
+}
 
-  function formatTime(date: Date): string {
-    return date.toLocaleTimeString("fr-FR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
+function formatTime(date: Date): string {
+	return date.toLocaleTimeString("fr-FR", {
+		hour: "2-digit",
+		minute: "2-digit",
+	});
+}
 
-  function cycleCodeTheme() {
-    const themes = ["tokyo-night", "github-dark", "dracula"];
-    const current = $settingsStore.codeTheme;
-    const nextIndex = (themes.indexOf(current) + 1) % themes.length;
-    settingsStore.setCodeTheme(themes[nextIndex]);
-  }
+function cycleCodeTheme() {
+	const themes = ["tokyo-night", "github-dark", "dracula"];
+	const current = $settingsStore.codeTheme;
+	const nextIndex = (themes.indexOf(current) + 1) % themes.length;
+	settingsStore.setCodeTheme(themes[nextIndex]);
+}
 
-  function handleMarkdownClick(event: MouseEvent) {
-    const target = event.target as HTMLElement;
-    const btn = target.closest(".theme-switch-btn");
-    if (btn) {
-      cycleCodeTheme();
-    }
-  }
+function handleMarkdownClick(event: MouseEvent) {
+	const target = event.target as HTMLElement;
+	const btn = target.closest(".theme-switch-btn");
+	if (btn) {
+		cycleCodeTheme();
+	}
+}
 </script>
 
 <div class="message-bubble" class:user={isUser} class:assistant={!isUser}>

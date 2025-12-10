@@ -1,23 +1,23 @@
 <script lang="ts">
-  import "../app.css";
+import "../app.css";
 
-  import { onMount } from "svelte";
-  import { chatStore, themeStore, settingsStore } from "$lib/stores";
+import { onMount } from "svelte";
+import { chatStore, settingsStore, themeStore } from "$lib/stores";
 
-  let { children } = $props();
+const { children } = $props();
 
-  onMount(() => {
-    themeStore.init();
-    settingsStore.init();
-    chatStore.init();
-  });
+onMount(() => {
+	themeStore.init();
+	settingsStore.init();
+	chatStore.init();
+});
 </script>
 
 <svelte:head>
-  <title>Chat AI - Assistant Intelligent</title>
+  <title>Hugbot - Assistant Intelligent</title>
   <meta
     name="description"
-    content="Chat AI - Votre assistant IA intelligent pour repondre a toutes vos questions"
+    content="Hugbot - Votre assistant IA intelligent pour repondre a toutes vos questions"
   />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
