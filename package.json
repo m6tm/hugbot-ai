@@ -34,6 +34,7 @@
 		"lucide-svelte": "^0.556.0",
 		"marked": "^17.0.1",
 		"openai": "^6.10.0",
+		"sharp": "^0.34.5",
 		"tailwindcss": "^4.1.17",
 		"voy-search": "^0.6.3"
 	}

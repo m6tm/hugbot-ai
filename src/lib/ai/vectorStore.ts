@@ -1,66 +1,83 @@
-import { VoyVectorStore } from "@langchain/community/vectorstores/voy";
+import { browser } from "$app/environment";
 import type { Document } from "@langchain/core/documents";
-import { Voy } from "voy-search";
 import { LocalEmbeddings } from "./embeddings";
+
+// Types - avoiding direct import due to resolution issues
+type VoyClient = any;
+type VoyStore = any;
 
 // Helper to interact with the raw Voy Index and persistence layer
 
 // Revised Class
 export class AppVectorStore {
-	private static instance: AppVectorStore;
-	private voyClient: Voy | null = null;
-	private store: VoyVectorStore | null = null;
-	private embeddings: LocalEmbeddings;
-	private readonly STORAGE_KEY = "chat_ai_voy_index";
+  private static instance: AppVectorStore;
+  private voyClient: VoyClient | null = null;
+  private store: VoyStore | null = null;
+  private embeddings: LocalEmbeddings;
+  private readonly STORAGE_KEY = "chat_ai_voy_index";
 
-	private constructor() {
-		this.embeddings = LocalEmbeddings.getInstance();
-	}
+  private constructor() {
+    this.embeddings = LocalEmbeddings.getInstance();
+  }
 
-	public static getInstance(): AppVectorStore {
-		if (!AppVectorStore.instance) {
-			AppVectorStore.instance = new AppVectorStore();
-		}
-		return AppVectorStore.instance;
-	}
+  public static getInstance(): AppVectorStore {
+    if (!AppVectorStore.instance) {
+      AppVectorStore.instance = new AppVectorStore();
+    }
+    return AppVectorStore.instance;
+  }
 
-	async getStore(): Promise<VoyVectorStore> {
-		if (this.store) return this.store;
+  async getStore(): Promise<VoyStore> {
+    if (!browser) {
+      // Return a dummy or throw context-aware error,
+      // though usually this shouldn't be called in SSR for RAG logic
+      throw new Error("Vector store is only available in the browser");
+    }
 
-		const data = localStorage.getItem(this.STORAGE_KEY);
+    if (this.store) return this.store;
 
-		if (data) {
-			try {
-				this.voyClient = Voy.deserialize(data);
-				console.log("VectorStore: Loaded index.");
-			} catch (e) {
-				console.error("VectorStore: Error loading index", e);
-				this.voyClient = new Voy();
-			}
-		} else {
-			this.voyClient = new Voy();
-		}
+    // Dynamic imports to avoid SSR issues with WASM/browser-only packages
+    const { Voy } = await import("voy-search");
+    const { VoyVectorStore } = await import(
+      "@langchain/community/vectorstores/voy"
+    );
 
-		this.store = new VoyVectorStore(this.voyClient, this.embeddings);
-		return this.store;
-	}
+    const data = localStorage.getItem(this.STORAGE_KEY);
 
-	async addDocuments(docs: Document[]) {
-		const store = await this.getStore();
-		await store.addDocuments(docs);
-		this.save();
-	}
+    if (data) {
+      try {
+        this.voyClient = Voy.deserialize(data);
+        console.log("VectorStore: Loaded index.");
+      } catch (e) {
+        console.error("VectorStore: Error loading index", e);
+        this.voyClient = new Voy();
+      }
+    } else {
+      this.voyClient = new Voy();
+    }
 
-	private save() {
-		if (this.voyClient) {
-			const serialized = this.voyClient.serialize();
-			localStorage.setItem(this.STORAGE_KEY, serialized);
-			console.log("VectorStore: Index saved.");
-		}
-	}
+    this.store = new VoyVectorStore(this.voyClient, this.embeddings);
+    return this.store;
+  }
 
-	async similaritySearch(query: string, k = 4) {
-		const store = await this.getStore();
-		return store.similaritySearch(query, k);
-	}
+  async addDocuments(docs: Document[]) {
+    if (!browser) return;
+    const store = await this.getStore();
+    await store.addDocuments(docs);
+    this.save();
+  }
+
+  private save() {
+    if (this.voyClient && browser) {
+      const serialized = this.voyClient.serialize();
+      localStorage.setItem(this.STORAGE_KEY, serialized);
+      console.log("VectorStore: Index saved.");
+    }
+  }
+
+  async similaritySearch(query: string, k = 4) {
+    if (!browser) return [];
+    const store = await this.getStore();
+    return store.similaritySearch(query, k);
+  }
 }
