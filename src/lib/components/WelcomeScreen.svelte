@@ -1,68 +1,56 @@
 <script lang="ts">
-/**
- * Composant WelcomeScreen - Ecran d'accueil
- */
-import { chatStore } from "$lib/stores";
-import ModelSelector from "./ModelSelector.svelte";
+  /**
+   * Composant WelcomeScreen - Ecran d'accueil
+   */
+  import { chatStore } from "$lib/stores";
+  import ModelSelector from "./ModelSelector.svelte";
 
-const suggestions = [
-	{
-		icon: "code",
-		title: "Aide au code",
-		description: "Ecrivez du code Python pour resoudre un algorithme",
-	},
-	{
-		icon: "lightbulb",
-		title: "Idees creatives",
-		description: "Suggerez-moi des idees pour un projet innovant",
-	},
-	{
-		icon: "book",
-		title: "Apprentissage",
-		description: "Expliquez-moi les bases du machine learning",
-	},
-	{
-		icon: "message",
-		title: "Conversation",
-		description: "Aidez-moi a rediger un email professionnel",
-	},
-];
+  const suggestions = [
+    {
+      icon: "code",
+      title: "Aide au code",
+      description: "Ecrivez du code Python pour resoudre un algorithme",
+    },
+    {
+      icon: "lightbulb",
+      title: "Idees creatives",
+      description: "Suggerez-moi des idees pour un projet innovant",
+    },
+    {
+      icon: "book",
+      title: "Apprentissage",
+      description: "Expliquez-moi les bases du machine learning",
+    },
+    {
+      icon: "message",
+      title: "Conversation",
+      description: "Aidez-moi a rediger un email professionnel",
+    },
+  ];
 
-async function handleSuggestionClick(description: string) {
-	const conversation = await chatStore.createConversation();
-	if (conversation) {
-		setTimeout(() => {
-			chatStore.sendMessage(description);
-		}, 100);
-	}
-}
+  async function handleSuggestionClick(description: string) {
+    const conversation = await chatStore.createConversation();
+    if (conversation) {
+      setTimeout(() => {
+        chatStore.sendMessage(description);
+      }, 100);
+    }
+  }
 </script>
 
 <div class="welcome-screen">
   <div class="welcome-content">
-    <div class="logo">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="48"
-        height="48"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="M12 8V4H8" />
-        <rect width="16" height="12" x="4" y="8" rx="2" />
-        <path d="M2 14h2" />
-        <path d="M20 14h2" />
-        <path d="M15 13v2" />
-        <path d="M9 13v2" />
-      </svg>
+    <div class="logo unselectable">
+      <img
+        src="/logo-hugbot-futuriste-carre-2-transparent.png"
+        alt="Logo Hugbot"
+        width="64"
+        height="64"
+      />
     </div>
 
-    <h1>Bienvenue sur Chat AI</h1>
-    <p class="subtitle">
+    <h1 class="unselectable">Bienvenue sur Chat AI</h1>
+    <p class="subtitle unselectable">
       Votre assistant IA intelligent. Posez-moi n'importe quelle question!
     </p>
 
@@ -171,6 +159,11 @@ async function handleSuggestionClick(description: string) {
     }
   }
 
+  .unselectable {
+    user-select: none;
+    pointer-events: none;
+  }
+
   .welcome-content {
     text-align: center;
     max-width: 800px;
@@ -182,15 +175,15 @@ async function handleSuggestionClick(description: string) {
     justify-content: center;
     width: 80px;
     height: 80px;
-    background: linear-gradient(
-      135deg,
-      var(--color-primary) 0%,
-      var(--color-accent) 100%
-    );
     border-radius: 24px;
-    color: white;
     margin-bottom: 24px;
     animation: float 3s ease-in-out infinite;
+  }
+
+  .logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   }
 
   @keyframes float {
