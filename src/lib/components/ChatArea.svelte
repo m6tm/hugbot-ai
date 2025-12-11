@@ -3,6 +3,7 @@
  * Composant ChatArea - Zone principale de chat
  */
 import { goto } from "$app/navigation";
+import { page } from "$app/stores";
 import { chatStore, currentConversation, currentMessages } from "$lib/stores";
 import ChatInput from "./ChatInput.svelte";
 import MessageBubble from "./MessageBubble.svelte";
@@ -93,7 +94,7 @@ function dismissError() {
       {/if}
     </div>
 
-    {#if $chatStore.error}
+    {#if $chatStore.error && !($page.data.session && ($chatStore.error.includes("limite") || $chatStore.error.includes("Connectez-vous")))}
       <div class="error-banner">
         <div class="error-content">
           <svg
