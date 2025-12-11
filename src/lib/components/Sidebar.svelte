@@ -4,7 +4,9 @@
  */
 
 import { onDestroy, onMount } from "svelte";
+import { enhance } from "$app/forms";
 import { goto } from "$app/navigation";
+import { page } from "$app/stores";
 import { chatStore, currentConversation, themeStore } from "$lib/stores";
 import ConversationItem from "./ConversationItem.svelte";
 import IconButton from "./ui/IconButton.svelte";
@@ -248,7 +250,9 @@ function handleConversationClick() {
         </svg>
       </div>
       {#if !isCollapsed}
-        <span class="username">Utilisateur</span>
+        <span class="username truncate"
+          >{$page.data.session?.user?.email ?? "Invité"}</span
+        >
       {/if}
 
       {#if showUserMenu}
@@ -348,6 +352,56 @@ function handleConversationClick() {
             </svg>
             <span>Documentation API</span>
           </button>
+
+          <div class="menu-divider"></div>
+
+          {#if $page.data.session}
+            <form action="/auth?/logout" method="POST" use:enhance>
+              <button class="menu-item danger" type="submit">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                <span>Se déconnecter</span>
+              </button>
+            </form>
+          {:else}
+            <button
+              class="menu-item"
+              onclick={() => {
+                goto("/auth");
+                showUserMenu = false;
+              }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                <polyline points="10 17 15 12 10 7" />
+                <line x1="15" y1="12" x2="3" y2="12" />
+              </svg>
+              <span>Se connecter</span>
+            </button>
+          {/if}
 
           <div class="menu-divider"></div>
 

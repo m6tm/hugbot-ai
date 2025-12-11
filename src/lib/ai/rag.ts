@@ -38,7 +38,9 @@ export class RAGService {
 				return "";
 			}
 
-			const context = results.map((doc) => doc.pageContent).join("\n\n---\n\n");
+			const context = results
+				.map((doc: Document) => doc.pageContent)
+				.join("\n\n---\n\n");
 			return `Context information is below.\n---------------------\n${context}\n---------------------\nGiven the context information and not prior knowledge, answer the query.`;
 		} catch (error) {
 			console.error("RAG Retrieval failed:", error);
