@@ -1,32 +1,32 @@
 <script lang="ts">
-/**
- * Composant MessageBubble - Bulle de message
- */
+  /**
+   * Composant MessageBubble - Bulle de message
+   */
 
-import hljs from "highlight.js";
-import { marked, type Tokens } from "marked";
-import type { Message } from "$lib/domain/entities/message";
-import { settingsStore } from "$lib/stores";
+  import hljs from "highlight.js";
+  import { marked, type Tokens } from "marked";
+  import type { Message } from "$lib/domain/entities/message";
+  import { chatStore, settingsStore, uiStore } from "$lib/stores";
 
-interface Props {
-	message: Message;
-}
+  interface Props {
+    message: Message;
+  }
 
-const { message }: Props = $props();
+  const { message }: Props = $props();
 
-let copied = $state(false);
+  let copied = $state(false);
 
-const isUser = $derived(message.role === "user");
+  const isUser = $derived(message.role === "user");
 
-// Renderer personnalise pour les blocs de code avec highlight.js
-const renderer = new marked.Renderer();
+  // Renderer personnalise pour les blocs de code avec highlight.js
+  const renderer = new marked.Renderer();
 
-renderer.code = ({ text, lang }: Tokens.Code) => {
-	const language = lang && hljs.getLanguage(lang) ? lang : "plaintext";
-	const highlighted = hljs.highlight(text, { language }).value;
-	const languageLabel = lang || "code";
+  renderer.code = ({ text, lang }: Tokens.Code) => {
+    const language = lang && hljs.getLanguage(lang) ? lang : "plaintext";
+    const highlighted = hljs.highlight(text, { language }).value;
+    const languageLabel = lang || "code";
 
-	return `<div class="code-block">
+    return `<div class="code-block">
       <div class="code-header">
         <span class="code-language">${languageLabel}</span>
         <div class="code-actions">
@@ -50,61 +50,73 @@ renderer.code = ({ text, lang }: Tokens.Code) => {
       </div>
       <pre><code class="hljs language-${language}">${highlighted}</code></pre>
     </div>`;
-};
+  };
 
-// Configuration de marked
-marked.setOptions({
-	breaks: true,
-	gfm: true,
-});
+  // Configuration de marked
+  marked.setOptions({
+    breaks: true,
+    gfm: true,
+  });
 
-marked.use({ renderer });
+  marked.use({ renderer });
 
-/**
- * Parse le contenu markdown et retourne le HTML
- */
-function parseMarkdown(content: string): string {
-	if (isUser) {
-		return content;
-	}
-	return marked.parse(content) as string;
-}
+  /**
+   * Parse le contenu markdown et retourne le HTML
+   */
+  function parseMarkdown(content: string): string {
+    if (isUser) {
+      return content;
+    }
+    return marked.parse(content) as string;
+  }
 
-const parsedContent = $derived(parseMarkdown(message.content));
+  const parsedContent = $derived(parseMarkdown(message.content));
 
-async function copyToClipboard() {
-	try {
-		await navigator.clipboard.writeText(message.content);
-		copied = true;
-		setTimeout(() => {
-			copied = false;
-		}, 2000);
-	} catch {
-		console.error("Impossible de copier le texte");
-	}
-}
+  async function copyToClipboard() {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      copied = true;
+      setTimeout(() => {
+        copied = false;
+      }, 2000);
+    } catch {
+      console.error("Impossible de copier le texte");
+    }
+  }
 
-function formatTime(date: Date): string {
-	return date.toLocaleTimeString("fr-FR", {
-		hour: "2-digit",
-		minute: "2-digit",
-	});
-}
+  function formatTime(date: Date): string {
+    return date.toLocaleTimeString("fr-FR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
 
-function cycleCodeTheme() {
-	const themes = ["tokyo-night", "github-dark", "dracula"];
-	const current = $settingsStore.codeTheme;
-	const nextIndex = (themes.indexOf(current) + 1) % themes.length;
-	settingsStore.setCodeTheme(themes[nextIndex]);
-}
+  function cycleCodeTheme() {
+    const themes = ["tokyo-night", "github-dark", "dracula"];
+    const current = $settingsStore.codeTheme;
+    const nextIndex = (themes.indexOf(current) + 1) % themes.length;
+    settingsStore.setCodeTheme(themes[nextIndex]);
+  }
 
-function handleMarkdownClick(event: MouseEvent) {
-	const target = event.target as HTMLElement;
-	const btn = target.closest(".theme-switch-btn");
-	if (btn) {
-		cycleCodeTheme();
-	}
-}
+  function handleMarkdownClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    const btn = target.closest(".theme-switch-btn");
+    if (btn) {
+      cycleCodeTheme();
+    }
+  }
+
+  async function handleRegenerate() {
+    try {
+      await chatStore.regenerateMessage(message.id);
+    } catch (error) {
+      console.error("Erreur lors de la regeneration:", error);
+    }
+  }
+
+  function startEditing() {
+    uiStore.startEditMessage(message.id, message.content);
+  }
 </script>
 
 <div class="message-bubble" class:user={isUser} class:assistant={!isUser}>
@@ -215,6 +227,51 @@ function handleMarkdownClick(event: MouseEvent) {
             </svg>
             <span>Copier</span>
           {/if}
+        </button>
+        <button
+          class="action-btn"
+          onclick={handleRegenerate}
+          aria-label="Regenerer"
+          disabled={$chatStore.isStreaming}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+            <path d="M16 16h5v5" />
+          </svg>
+          <span>Regenerer</span>
+        </button>
+      </div>
+    {/if}
+
+    {#if isUser && !$chatStore.isStreaming}
+      <div class="actions">
+        <button class="action-btn" onclick={startEditing} aria-label="Modifier">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+          </svg>
+          <span>Modifier</span>
         </button>
       </div>
     {/if}
@@ -523,6 +580,11 @@ function handleMarkdownClick(event: MouseEvent) {
   .action-btn:hover {
     background: var(--bg-hover);
     color: var(--text-main);
+  }
+
+  .action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   /* Styles pour le contenu Markdown */

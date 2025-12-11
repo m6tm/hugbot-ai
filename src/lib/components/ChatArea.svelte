@@ -1,24 +1,34 @@
 <script lang="ts">
-/**
- * Composant ChatArea - Zone principale de chat
- */
-import { chatStore, currentConversation, currentMessages } from "$lib/stores";
-import ChatInput from "./ChatInput.svelte";
-import MessageBubble from "./MessageBubble.svelte";
-import ModelSelector from "./ModelSelector.svelte";
-import WelcomeScreen from "./WelcomeScreen.svelte";
+  /**
+   * Composant ChatArea - Zone principale de chat
+   */
+  import { goto } from "$app/navigation";
+  import { chatStore, currentConversation, currentMessages } from "$lib/stores";
+  import ChatInput from "./ChatInput.svelte";
+  import MessageBubble from "./MessageBubble.svelte";
+  import ModelSelector from "./ModelSelector.svelte";
+  import WelcomeScreen from "./WelcomeScreen.svelte";
 
-let messagesContainer = $state<HTMLDivElement>();
+  let messagesContainer = $state<HTMLDivElement>();
 
-$effect(() => {
-	if ($currentMessages.length > 0 && messagesContainer) {
-		setTimeout(() => {
-			if (messagesContainer) {
-				messagesContainer.scrollTop = messagesContainer.scrollHeight;
-			}
-		}, 100);
-	}
-});
+  $effect(() => {
+    if ($currentMessages.length > 0 && messagesContainer) {
+      setTimeout(() => {
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+      }, 100);
+    }
+  });
+
+  function handleLoginClick() {
+    chatStore.clearError();
+    goto("/auth");
+  }
+
+  function dismissError() {
+    chatStore.clearError();
+  }
 </script>
 
 <main class="chat-area">
@@ -82,6 +92,55 @@ $effect(() => {
         </div>
       {/if}
     </div>
+
+    {#if $chatStore.error}
+      <div class="error-banner">
+        <div class="error-content">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span>{$chatStore.error}</span>
+        </div>
+        <div class="error-actions">
+          {#if $chatStore.error.includes("Connectez-vous") || $chatStore.error.includes("limite")}
+            <button class="error-btn primary" onclick={handleLoginClick}>
+              Se connecter
+            </button>
+          {/if}
+          <button
+            class="error-btn dismiss"
+            onclick={dismissError}
+            aria-label="Fermer"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    {/if}
 
     <ChatInput />
   {/if}
@@ -210,5 +269,94 @@ $effect(() => {
   .empty-chat p {
     font-size: 15px;
     max-width: 300px;
+  }
+
+  .error-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    max-width: 900px;
+    margin: 0 auto 16px;
+    padding: 12px 16px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 12px;
+    color: #ef4444;
+  }
+
+  .error-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+  }
+
+  .error-content svg {
+    flex-shrink: 0;
+  }
+
+  .error-content span {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .error-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .error-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .error-btn.primary {
+    background: linear-gradient(
+      135deg,
+      var(--color-primary) 0%,
+      var(--color-accent) 100%
+    );
+    color: white;
+  }
+
+  .error-btn.primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+
+  .error-btn.dismiss {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    color: #ef4444;
+  }
+
+  .error-btn.dismiss:hover {
+    background: rgba(239, 68, 68, 0.15);
+  }
+
+  @media (max-width: 767px) {
+    .error-banner {
+      margin: 0 16px 16px;
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .error-actions {
+      justify-content: flex-end;
+    }
   }
 </style>
