@@ -1,37 +1,38 @@
 <script lang="ts">
-  import { fade, fly, slide } from "svelte/transition";
-  import { enhance } from "$app/forms";
+import { fade, fly, slide } from "svelte/transition";
+import { enhance } from "$app/forms";
 
-  let { form, data } = $props();
+let { form, data } = $props();
 
-  let isLogin = $state(true);
-  let loading = $state(false);
+let isLogin = $state(true);
+let loading = $state(false);
 
-  function toggleMode() {
-    isLogin = !isLogin;
-    if (form) form.error = undefined;
-    errorMessage = "";
-  }
+function toggleMode() {
+	isLogin = !isLogin;
+	if (form) form.error = undefined;
+	errorMessage = "";
+}
 
-  let errorMessage = $state("");
+let errorMessage = $state("");
 
-  async function handleGoogleLogin() {
-    try {
-      loading = true;
-      errorMessage = "";
-      const { error } = await data.supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-      if (error) throw error;
-    } catch (e: any) {
-      console.error(e);
-      errorMessage = e.message;
-      loading = false;
-    }
-  }
+async function handleGoogleLogin() {
+	try {
+		loading = true;
+		errorMessage = "";
+		const { error } = await data.supabase.auth.signInWithOAuth({
+			provider: "google",
+			options: {
+				redirectTo: `${window.location.origin}/auth/callback`,
+			},
+		});
+		if (error) throw error;
+	} catch (e: unknown) {
+		const error = e instanceof Error ? e : new Error(String(e));
+		console.error(error);
+		errorMessage = error.message;
+		loading = false;
+	}
+}
 </script>
 
 <svelte:head>

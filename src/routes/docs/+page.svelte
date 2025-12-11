@@ -1,74 +1,74 @@
 <script lang="ts">
-  /**
-   * Page de documentation de l'API
-   */
+/**
+ * Page de documentation de l'API
+ */
 
-  import { onMount } from "svelte";
-  import { goto } from "$app/navigation";
-  import CodeBlock from "$lib/components/CodeBlock.svelte";
+import { onMount } from "svelte";
+import { goto } from "$app/navigation";
+import CodeBlock from "$lib/components/CodeBlock.svelte";
 
-  let copiedIndex: number | null = $state(null);
-  let baseUrl = $state("");
+let copiedIndex: number | null = $state(null);
+let baseUrl = $state("");
 
-  onMount(() => {
-    baseUrl = window.location.origin;
-  });
+onMount(() => {
+	baseUrl = window.location.origin;
+});
 
-  function copyToClipboard(text: string, index: number) {
-    navigator.clipboard.writeText(text);
-    copiedIndex = index;
-    setTimeout(() => {
-      copiedIndex = null;
-    }, 2000);
-  }
+function copyToClipboard(text: string, index: number) {
+	navigator.clipboard.writeText(text);
+	copiedIndex = index;
+	setTimeout(() => {
+		copiedIndex = null;
+	}, 2000);
+}
 
-  const endpoints = [
-    {
-      method: "POST",
-      path: "/api/v1/chat/completions",
-      description: "Cree une completion de chat avec streaming optionnel",
-      auth: true,
-    },
-    {
-      method: "GET",
-      path: "/api/v1/models",
-      description: "Liste les modeles disponibles",
-      auth: false,
-    },
-  ];
+const endpoints = [
+	{
+		method: "POST",
+		path: "/api/v1/chat/completions",
+		description: "Cree une completion de chat avec streaming optionnel",
+		auth: true,
+	},
+	{
+		method: "GET",
+		path: "/api/v1/models",
+		description: "Liste les modeles disponibles",
+		auth: false,
+	},
+];
 
-  const models = [
-    {
-      id: "deepseek-ai/DeepSeek-V3.2",
-      name: "DeepSeek V3.2",
-      description: "Modele DeepSeek puissant et rapide",
-    },
-    {
-      id: "Qwen/Qwen2.5-72B-Instruct",
-      name: "Qwen 2.5 72B",
-      description: "Modele Alibaba tres performant",
-    },
-    {
-      id: "meta-llama/Llama-3.3-70B-Instruct",
-      name: "Llama 3.3 70B",
-      description: "Modele Meta derniere generation",
-    },
-    {
-      id: "mistralai/Mistral-Nemo-Instruct-2407",
-      name: "Mistral Nemo",
-      description: "Modele Mistral compact et efficace",
-    },
-    {
-      id: "microsoft/Phi-3-mini-4k-instruct",
-      name: "Phi-3 Mini",
-      description: "Petit modele Microsoft tres capable",
-    },
-    {
-      id: "google/gemma-2-27b-it",
-      name: "Gemma 2 27B",
-      description: "Modele Google open source",
-    },
-  ];
+const models = [
+	{
+		id: "deepseek-ai/DeepSeek-V3.2",
+		name: "DeepSeek V3.2",
+		description: "Modele DeepSeek puissant et rapide",
+	},
+	{
+		id: "Qwen/Qwen2.5-72B-Instruct",
+		name: "Qwen 2.5 72B",
+		description: "Modele Alibaba tres performant",
+	},
+	{
+		id: "meta-llama/Llama-3.3-70B-Instruct",
+		name: "Llama 3.3 70B",
+		description: "Modele Meta derniere generation",
+	},
+	{
+		id: "mistralai/Mistral-Nemo-Instruct-2407",
+		name: "Mistral Nemo",
+		description: "Modele Mistral compact et efficace",
+	},
+	{
+		id: "microsoft/Phi-3-mini-4k-instruct",
+		name: "Phi-3 Mini",
+		description: "Petit modele Microsoft tres capable",
+	},
+	{
+		id: "google/gemma-2-27b-it",
+		name: "Gemma 2 27B",
+		description: "Modele Google open source",
+	},
+];
 </script>
 
 <div class="docs-container">

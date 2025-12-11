@@ -1,28 +1,28 @@
 <script lang="ts">
-  import "../app.css";
+import "../app.css";
 
-  import { onMount } from "svelte";
-  import { invalidate } from "$app/navigation";
-  import { chatStore, settingsStore, themeStore } from "$lib/stores";
+import { onMount } from "svelte";
+import { invalidate } from "$app/navigation";
+import { chatStore, settingsStore, themeStore } from "$lib/stores";
 
-  let { children, data } = $props();
-  let { session, supabase } = $derived(data);
+let { children, data } = $props();
+let { session, supabase } = $derived(data);
 
-  onMount(() => {
-    themeStore.init();
-    settingsStore.init();
-    chatStore.init();
+onMount(() => {
+	themeStore.init();
+	settingsStore.init();
+	chatStore.init();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, _session) => {
-      if (_session?.expires_at !== session?.expires_at) {
-        invalidate("supabase:auth");
-      }
-    });
+	const {
+		data: { subscription },
+	} = supabase.auth.onAuthStateChange((_event, _session) => {
+		if (_session?.expires_at !== session?.expires_at) {
+			invalidate("supabase:auth");
+		}
+	});
 
-    return () => subscription.unsubscribe();
-  });
+	return () => subscription.unsubscribe();
+});
 </script>
 
 <svelte:head>

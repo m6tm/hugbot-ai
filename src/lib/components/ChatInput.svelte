@@ -2,13 +2,23 @@
 /**
  * Composant ChatInput - Zone de saisie du message
  */
-import { chatStore } from "$lib/stores";
+import { chatStore, uiStore } from "$lib/stores";
 import IconButton from "./ui/IconButton.svelte";
 
 let message = $state("");
 let textareaRef: HTMLTextAreaElement;
 
 const isDisabled = $derived($chatStore.isStreaming || !message.trim());
+
+// Ecoute les evenements de focus depuis le uiStore
+$effect(() => {
+	const trigger = $uiStore.focusChatInputTrigger;
+	if (trigger > 0 && textareaRef) {
+		setTimeout(() => {
+			textareaRef?.focus();
+		}, 100);
+	}
+});
 
 function handleSubmit(e?: SubmitEvent) {
 	e?.preventDefault();

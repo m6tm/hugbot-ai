@@ -14,23 +14,23 @@ const RESET_INTERVAL_HOURS = 24;
  * @returns true si l'utilisateur peut envoyer un message, false sinon
  */
 export async function canGuestSendMessage(ip: string): Promise<boolean> {
-  const guestLimit = await prisma.guestLimit.findUnique({
-    where: { ip },
-  });
+	const guestLimit = await prisma.guestLimit.findUnique({
+		where: { ip },
+	});
 
-  if (!guestLimit) {
-    return true;
-  }
+	if (!guestLimit) {
+		return true;
+	}
 
-  const now = new Date();
-  const hoursSinceReset =
-    (now.getTime() - guestLimit.lastReset.getTime()) / (1000 * 60 * 60);
+	const now = new Date();
+	const hoursSinceReset =
+		(now.getTime() - guestLimit.lastReset.getTime()) / (1000 * 60 * 60);
 
-  if (hoursSinceReset >= RESET_INTERVAL_HOURS) {
-    return true;
-  }
+	if (hoursSinceReset >= RESET_INTERVAL_HOURS) {
+		return true;
+	}
 
-  return guestLimit.count < MAX_GUEST_MESSAGES;
+	return guestLimit.count < MAX_GUEST_MESSAGES;
 }
 
 /**
@@ -38,42 +38,42 @@ export async function canGuestSendMessage(ip: string): Promise<boolean> {
  * @param ip - Adresse IP de l'utilisateur
  */
 export async function incrementGuestMessageCount(ip: string): Promise<void> {
-  const now = new Date();
+	const now = new Date();
 
-  const existing = await prisma.guestLimit.findUnique({
-    where: { ip },
-  });
+	const existing = await prisma.guestLimit.findUnique({
+		where: { ip },
+	});
 
-  if (!existing) {
-    await prisma.guestLimit.create({
-      data: {
-        ip,
-        count: 1,
-        lastReset: now,
-      },
-    });
-    return;
-  }
+	if (!existing) {
+		await prisma.guestLimit.create({
+			data: {
+				ip,
+				count: 1,
+				lastReset: now,
+			},
+		});
+		return;
+	}
 
-  const hoursSinceReset =
-    (now.getTime() - existing.lastReset.getTime()) / (1000 * 60 * 60);
+	const hoursSinceReset =
+		(now.getTime() - existing.lastReset.getTime()) / (1000 * 60 * 60);
 
-  if (hoursSinceReset >= RESET_INTERVAL_HOURS) {
-    await prisma.guestLimit.update({
-      where: { ip },
-      data: {
-        count: 1,
-        lastReset: now,
-      },
-    });
-  } else {
-    await prisma.guestLimit.update({
-      where: { ip },
-      data: {
-        count: existing.count + 1,
-      },
-    });
-  }
+	if (hoursSinceReset >= RESET_INTERVAL_HOURS) {
+		await prisma.guestLimit.update({
+			where: { ip },
+			data: {
+				count: 1,
+				lastReset: now,
+			},
+		});
+	} else {
+		await prisma.guestLimit.update({
+			where: { ip },
+			data: {
+				count: existing.count + 1,
+			},
+		});
+	}
 }
 
 /**
@@ -82,21 +82,21 @@ export async function incrementGuestMessageCount(ip: string): Promise<void> {
  * @returns Le nombre de messages restants
  */
 export async function getRemainingGuestMessages(ip: string): Promise<number> {
-  const guestLimit = await prisma.guestLimit.findUnique({
-    where: { ip },
-  });
+	const guestLimit = await prisma.guestLimit.findUnique({
+		where: { ip },
+	});
 
-  if (!guestLimit) {
-    return MAX_GUEST_MESSAGES;
-  }
+	if (!guestLimit) {
+		return MAX_GUEST_MESSAGES;
+	}
 
-  const now = new Date();
-  const hoursSinceReset =
-    (now.getTime() - guestLimit.lastReset.getTime()) / (1000 * 60 * 60);
+	const now = new Date();
+	const hoursSinceReset =
+		(now.getTime() - guestLimit.lastReset.getTime()) / (1000 * 60 * 60);
 
-  if (hoursSinceReset >= RESET_INTERVAL_HOURS) {
-    return MAX_GUEST_MESSAGES;
-  }
+	if (hoursSinceReset >= RESET_INTERVAL_HOURS) {
+		return MAX_GUEST_MESSAGES;
+	}
 
-  return Math.max(0, MAX_GUEST_MESSAGES - guestLimit.count);
+	return Math.max(0, MAX_GUEST_MESSAGES - guestLimit.count);
 }

@@ -1,81 +1,88 @@
 <script lang="ts">
-  /**
-   * Composant Sidebar - Liste des conversations et actions
-   */
+/**
+ * Composant Sidebar - Liste des conversations et actions
+ */
 
-  import { onDestroy, onMount } from "svelte";
-  import { enhance } from "$app/forms";
-  import { goto } from "$app/navigation";
-  import { chatStore, currentConversation, themeStore } from "$lib/stores";
-  import ConversationItem from "./ConversationItem.svelte";
-  import IconButton from "./ui/IconButton.svelte";
+import { onDestroy, onMount } from "svelte";
+import { enhance } from "$app/forms";
+import { goto } from "$app/navigation";
+import {
+	chatStore,
+	currentConversation,
+	themeStore,
+	uiStore,
+} from "$lib/stores";
+import ConversationItem from "./ConversationItem.svelte";
+import IconButton from "./ui/IconButton.svelte";
 
-  let { session } = $props();
+let { session } = $props();
 
-  let isCollapsed = $state(false);
-  let isMobileOpen = $state(false);
-  let isMobile = $state(false);
-  let searchQuery = $state("");
-  let showUserMenu = $state(false);
+let isCollapsed = $state(false);
+let isMobileOpen = $state(false);
+let isMobile = $state(false);
+let searchQuery = $state("");
+let showUserMenu = $state(false);
 
-  const MOBILE_BREAKPOINT = 768;
+const MOBILE_BREAKPOINT = 768;
 
-  function checkMobile() {
-    isMobile = window.innerWidth < MOBILE_BREAKPOINT;
-    if (!isMobile) {
-      isMobileOpen = false;
-    }
-  }
+function checkMobile() {
+	isMobile = window.innerWidth < MOBILE_BREAKPOINT;
+	if (!isMobile) {
+		isMobileOpen = false;
+	}
+}
 
-  onMount(() => {
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-  });
+onMount(() => {
+	checkMobile();
+	window.addEventListener("resize", checkMobile);
+});
 
-  onDestroy(() => {
-    if (typeof window !== "undefined") {
-      window.removeEventListener("resize", checkMobile);
-    }
-  });
+onDestroy(() => {
+	if (typeof window !== "undefined") {
+		window.removeEventListener("resize", checkMobile);
+	}
+});
 
-  const filteredConversations = $derived(
-    $chatStore.conversations.filter((conv) =>
-      conv.title.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  );
+const filteredConversations = $derived(
+	$chatStore.conversations.filter((conv) =>
+		conv.title.toLowerCase().includes(searchQuery.toLowerCase()),
+	),
+);
 
-  async function handleNewChat() {
-    await chatStore.createConversation();
-    if (isMobile) {
-      isMobileOpen = false;
-    }
-  }
+async function handleNewChat() {
+	await chatStore.createConversation();
+	if (isMobile) {
+		isMobileOpen = false;
+	}
+	uiStore.focusChatInput();
+}
 
-  function toggleSidebar() {
-    if (isMobile) {
-      isMobileOpen = !isMobileOpen;
-    } else {
-      isCollapsed = !isCollapsed;
-    }
-  }
+function toggleSidebar() {
+	if (isMobile) {
+		isMobileOpen = !isMobileOpen;
+	} else {
+		isCollapsed = !isCollapsed;
+	}
+}
 
-  function closeMobileSidebar() {
-    isMobileOpen = false;
-  }
+function closeMobileSidebar() {
+	isMobileOpen = false;
+}
 
-  function toggleUserMenu() {
-    showUserMenu = !showUserMenu;
-  }
+function toggleUserMenu() {
+	showUserMenu = !showUserMenu;
+}
 
-  function handleClearAllConversations() {
-    showUserMenu = false;
-  }
+function handleClearAllConversations() {
+	showUserMenu = false;
+}
 
-  function handleConversationClick() {
-    if (isMobile) {
-      isMobileOpen = false;
-    }
-  }
+function handleConversationClick() {
+	if (isMobile) {
+		isMobileOpen = false;
+	}
+	uiStore.focusChatInput();
+}
 </script>
 
 <!-- Bouton mobile visible uniquement sur petit ecran -->

@@ -97,8 +97,21 @@ function createChatStore() {
 
 		/**
 		 * Cree une nouvelle conversation
+		 * Si la conversation actuelle est vide (aucun message), on la reutilise
 		 */
 		async createConversation() {
+			const currentState = get({ subscribe });
+
+			// Verifie si la conversation actuelle existe et n'a aucun message
+			if (currentState.currentConversationId) {
+				const currentConv = currentState.conversations.find(
+					(c) => c.id === currentState.currentConversationId,
+				);
+				if (currentConv && currentConv.messages.length === 0) {
+					return currentConv;
+				}
+			}
+
 			try {
 				const chatUseCase = createUseCase();
 				const conversation = await chatUseCase.createNewConversation();
