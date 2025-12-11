@@ -45,7 +45,7 @@ export const actions: Actions = {
     }
 
     // On cree l'utilisateur
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -58,6 +58,11 @@ export const actions: Actions = {
 
     if (error) {
       return fail(400, { email, error: error.message });
+    }
+
+    // Si une session est retournee (ex: confirmation email desactivee), on connecte direct
+    if (data.session) {
+      redirect(303, "/");
     }
 
     // En mode dev, on connecte directement ou on demande confirmation selon la config supabase
