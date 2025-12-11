@@ -6,197 +6,222 @@
 
 import { DEFAULT_SYSTEM_INSTRUCTION } from "$lib/config/default-system-prompt";
 import type { Message } from "$lib/domain/entities/message";
+import { getOrCreateFingerprint } from "$lib/utils/fingerprint";
 import type {
-	ChatCompletionOptions,
-	ChatServicePort,
+  ChatCompletionOptions,
+  ChatServicePort,
 } from "$lib/domain/ports/chat-service.port";
 
 interface HuggingFaceConfig {
-	apiKey?: string;
-	modelId: string;
+  apiKey?: string;
+  modelId: string;
 }
 
 interface ApiChatResponse {
-	content?: string;
-	error?: string;
+  content?: string;
+  error?: string;
+  message?: string;
 }
 
 export class HuggingFaceAdapter implements ChatServicePort {
-	private apiKey: string;
-	private modelId: string;
+  private apiKey: string;
+  private modelId: string;
+  private fingerprint: string | null = null;
 
-	constructor(config: HuggingFaceConfig) {
-		this.apiKey = config.apiKey || "";
-		this.modelId = config.modelId;
-	}
+  constructor(config: HuggingFaceConfig) {
+    this.apiKey = config.apiKey || "";
+    this.modelId = config.modelId;
+    this.initFingerprint();
+  }
 
-	setModel(modelId: string): void {
-		this.modelId = modelId;
-	}
+  private async initFingerprint(): Promise<void> {
+    if (typeof window !== "undefined") {
+      this.fingerprint = await getOrCreateFingerprint();
+    }
+  }
 
-	setApiKey(apiKey: string): void {
-		this.apiKey = apiKey;
-	}
+  setModel(modelId: string): void {
+    this.modelId = modelId;
+  }
 
-	private formatMessages(messages: Message[], systemInstruction?: string) {
-		const formattedMessages = messages.map((m) => ({
-			role: m.role as "user" | "assistant" | "system",
-			content: m.content,
-		}));
+  setApiKey(apiKey: string): void {
+    this.apiKey = apiKey;
+  }
 
-		// Combine default instruction with user instruction
-		let systemContent = DEFAULT_SYSTEM_INSTRUCTION;
-		if (systemInstruction) {
-			systemContent += `\n\n${systemInstruction}`;
-		}
+  private formatMessages(messages: Message[], systemInstruction?: string) {
+    const formattedMessages = messages.map((m) => ({
+      role: m.role as "user" | "assistant" | "system",
+      content: m.content,
+    }));
 
-		formattedMessages.unshift({
-			role: "system",
-			content: systemContent,
-		});
+    // Combine default instruction with user instruction
+    let systemContent = DEFAULT_SYSTEM_INSTRUCTION;
+    if (systemInstruction) {
+      systemContent += `\n\n${systemInstruction}`;
+    }
 
-		return formattedMessages;
-	}
+    formattedMessages.unshift({
+      role: "system",
+      content: systemContent,
+    });
 
-	/**
-	 * Appelle la route API serveur (mode non-streaming)
-	 */
-	private async callApi(
-		messages: Message[],
-		options?: ChatCompletionOptions,
-	): Promise<string> {
-		const formattedMessages = this.formatMessages(
-			messages,
-			options?.systemInstruction,
-		);
+    return formattedMessages;
+  }
 
-		const response = await fetch("/api/chat", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				messages: formattedMessages,
-				modelId: this.modelId,
-				temperature: options?.temperature || 0.7,
-				maxTokens: options?.maxTokens || 1024,
-				apiKey: this.apiKey || undefined,
-				stream: false,
-			}),
-		});
+  /**
+   * Appelle la route API serveur (mode non-streaming)
+   */
+  private async callApi(
+    messages: Message[],
+    options?: ChatCompletionOptions
+  ): Promise<string> {
+    const formattedMessages = this.formatMessages(
+      messages,
+      options?.systemInstruction
+    );
 
-		const data: ApiChatResponse = await response.json();
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: formattedMessages,
+        modelId: this.modelId,
+        temperature: options?.temperature || 0.7,
+        maxTokens: options?.maxTokens || 1024,
+        apiKey: this.apiKey || undefined,
+        stream: false,
+        fingerprint: this.fingerprint || undefined,
+      }),
+    });
 
-		if (!response.ok || data.error) {
-			throw new Error(
-				data.error || "Erreur lors de la communication avec l'API",
-			);
-		}
+    const data: ApiChatResponse = await response.json();
 
-		return data.content || "";
-	}
+    if (!response.ok || data.error) {
+      if (data.error === "GUEST_LIMIT_REACHED") {
+        throw new Error(
+          data.message ||
+            "Limite journalière atteinte. Connectez-vous pour continuer."
+        );
+      }
+      throw new Error(
+        data.error || "Erreur lors de la communication avec l'API"
+      );
+    }
 
-	async sendMessage(
-		messages: Message[],
-		options?: ChatCompletionOptions,
-	): Promise<string> {
-		return this.callApi(messages, options);
-	}
+    return data.content || "";
+  }
 
-	/**
-	 * Streaming avec Server-Sent Events (SSE)
-	 */
-	async streamMessage(
-		messages: Message[],
-		options?: ChatCompletionOptions,
-		onChunk?: (chunk: string) => void,
-	): Promise<string> {
-		const formattedMessages = this.formatMessages(
-			messages,
-			options?.systemInstruction,
-		);
+  async sendMessage(
+    messages: Message[],
+    options?: ChatCompletionOptions
+  ): Promise<string> {
+    return this.callApi(messages, options);
+  }
 
-		const response = await fetch("/api/chat", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				messages: formattedMessages,
-				modelId: this.modelId,
-				temperature: options?.temperature || 0.7,
-				maxTokens: options?.maxTokens || 1024,
-				apiKey: this.apiKey || undefined,
-				stream: true,
-			}),
-		});
+  /**
+   * Streaming avec Server-Sent Events (SSE)
+   */
+  async streamMessage(
+    messages: Message[],
+    options?: ChatCompletionOptions,
+    onChunk?: (chunk: string) => void
+  ): Promise<string> {
+    const formattedMessages = this.formatMessages(
+      messages,
+      options?.systemInstruction
+    );
 
-		if (!response.ok) {
-			const errorData = await response.json();
-			throw new Error(
-				errorData.error || "Erreur lors de la communication avec l'API",
-			);
-		}
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: formattedMessages,
+        modelId: this.modelId,
+        temperature: options?.temperature || 0.7,
+        maxTokens: options?.maxTokens || 1024,
+        apiKey: this.apiKey || undefined,
+        stream: true,
+        fingerprint: this.fingerprint || undefined,
+      }),
+    });
 
-		const reader = response.body?.getReader();
-		if (!reader) {
-			throw new Error("Impossible de lire le stream");
-		}
+    if (!response.ok) {
+      const errorData: ApiChatResponse = await response.json();
+      if (errorData.error === "GUEST_LIMIT_REACHED") {
+        throw new Error(
+          errorData.message ||
+            "Limite journalière atteinte. Connectez-vous pour continuer."
+        );
+      }
+      throw new Error(
+        errorData.error || "Erreur lors de la communication avec l'API"
+      );
+    }
 
-		const decoder = new TextDecoder();
-		let fullContent = "";
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("Impossible de lire le stream");
+    }
 
-		while (true) {
-			const { done, value } = await reader.read();
-			if (done) break;
+    const decoder = new TextDecoder();
+    let fullContent = "";
 
-			const text = decoder.decode(value, { stream: true });
-			const lines = text.split("\n");
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-			for (const line of lines) {
-				if (line.startsWith("data: ")) {
-					const data = line.slice(6);
+      const text = decoder.decode(value, { stream: true });
+      const lines = text.split("\n");
 
-					if (data === "[DONE]") {
-						break;
-					}
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const data = line.slice(6);
 
-					try {
-						const parsed = JSON.parse(data);
-						if (parsed.content) {
-							fullContent += parsed.content;
-							onChunk?.(parsed.content);
-						}
-						if (parsed.error) {
-							throw new Error(parsed.error);
-						}
-					} catch {
-						// Ignorer les erreurs de parsing (lignes vides, etc.)
-					}
-				}
-			}
-		}
+          if (data === "[DONE]") {
+            break;
+          }
 
-		return fullContent;
-	}
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.content) {
+              fullContent += parsed.content;
+              onChunk?.(parsed.content);
+            }
+            if (parsed.error) {
+              throw new Error(parsed.error);
+            }
+          } catch {
+            // Ignorer les erreurs de parsing (lignes vides, etc.)
+          }
+        }
+      }
+    }
 
-	async isAvailable(): Promise<boolean> {
-		try {
-			const response = await fetch("/api/chat", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					messages: [{ role: "user", content: "test" }],
-					modelId: this.modelId,
-					maxTokens: 1,
-					apiKey: this.apiKey || undefined,
-				}),
-			});
-			return response.ok;
-		} catch {
-			return false;
-		}
-	}
+    return fullContent;
+  }
+
+  async isAvailable(): Promise<boolean> {
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: "test" }],
+          modelId: this.modelId,
+          maxTokens: 1,
+          apiKey: this.apiKey || undefined,
+          fingerprint: this.fingerprint || undefined,
+        }),
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
 }
