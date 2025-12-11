@@ -1,12 +1,14 @@
 <script lang="ts">
-/**
- * Page principale du Chat AI
- */
-import { ChatArea, Sidebar } from "$lib/components";
+  /**
+   * Page principale du Chat AI
+   */
+  import { ChatArea, Sidebar } from "$lib/components";
+
+  let { data } = $props();
 </script>
 
 <div class="app-container">
-  <Sidebar />
+  <Sidebar session={data.session} />
   <ChatArea />
 </div>
 

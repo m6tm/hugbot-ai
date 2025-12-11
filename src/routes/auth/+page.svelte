@@ -1,75 +1,65 @@
 <script lang="ts">
-import { fade, fly, slide } from "svelte/transition";
-import { enhance } from "$app/forms";
+  import { fade, fly, slide } from "svelte/transition";
+  import { enhance } from "$app/forms";
 
-let { form } = $props();
+  let { form, data } = $props();
 
-let isLogin = $state(true);
-let loading = $state(false);
+  let isLogin = $state(true);
+  let loading = $state(false);
 
-function toggleMode() {
-	isLogin = !isLogin;
-	if (form) form.error = undefined;
-}
+  function toggleMode() {
+    isLogin = !isLogin;
+    if (form) form.error = undefined;
+    errorMessage = "";
+  }
+
+  let errorMessage = $state("");
+
+  async function handleGoogleLogin() {
+    try {
+      loading = true;
+      errorMessage = "";
+      const { error } = await data.supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) throw error;
+    } catch (e: any) {
+      console.error(e);
+      errorMessage = e.message;
+      loading = false;
+    }
+  }
 </script>
 
 <svelte:head>
   <title>{isLogin ? "Connexion" : "Inscription"} - Hugbot</title>
 </svelte:head>
 
-<div
-  class="relative min-h-screen flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-gray-900 transition-colors duration-500"
->
-  <!-- Animated Background Blobs -->
-  <div
-    class="absolute -top-[30%] -left-[10%] w-[70vh] h-[70vh] rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[80px] opacity-70 animate-blob bg-purple-300 dark:bg-purple-600/30"
-  ></div>
-  <div
-    class="absolute top-[20%] -right-[10%] w-[70vh] h-[70vh] rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[80px] opacity-70 animate-blob animation-delay-2000 bg-indigo-300 dark:bg-indigo-600/30"
-  ></div>
-  <div
-    class="absolute -bottom-[30%] left-[20%] w-[70vh] h-[70vh] rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[80px] opacity-70 animate-blob animation-delay-4000 bg-pink-300 dark:bg-pink-600/30"
-  ></div>
+<div class="auth-container">
+  <div class="background-globes">
+    <div class="globe globe-1"></div>
+    <div class="globe globe-2"></div>
+    <div class="globe globe-3"></div>
+  </div>
 
-  <!-- Glassmorphism Card -->
-  <div
-    class="relative w-full max-w-md p-8 mx-4 transition-all duration-300 bg-white/70 dark:bg-gray-800/60 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.5)] z-10"
-    in:fly={{ y: 20, duration: 600, delay: 100 }}
-  >
+  <div class="auth-card" in:fly={{ y: 20, duration: 600, delay: 100 }}>
     <!-- Header -->
-    <div class="text-center mb-8">
-      <div
-        class="mx-auto w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg mb-6 transform transition-transform hover:scale-105 duration-300"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="w-8 h-8 text-white"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path
-            d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"
-          />
-          <path d="M4 12a10 10 0 0 1 10-10 10 10 0 0 1 10 10" />
-          <path d="M9 12h.01" />
-          <path d="M15 12h.01" />
-          <path d="M12 16a4 4 0 0 1-4-4" />
-          <path
-            d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10Z"
-            opacity="0.2"
-          />
-        </svg>
+    <div class="auth-header">
+      <div class="logo-badge">
+        <img
+          src="/logo-hugbot-futuriste-carre-2-transparent.png"
+          alt="Logo Hugbot"
+          width="64"
+          height="64"
+        />
       </div>
-      <h2
-        class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400"
-      >
+      <h2>
         {isLogin ? "Bon retour !" : "Créer un compte"}
       </h2>
-      <p class="mt-3 text-sm text-gray-600 dark:text-gray-300 font-medium">
+      <p class="subtitle">
         {isLogin
           ? "Votre assistant IA personnel vous attend."
           : "Rejoignez l'aventure Hugbot dès aujourd'hui."}
@@ -78,61 +68,44 @@ function toggleMode() {
 
     <!-- Success Message -->
     {#if form?.success}
-      <div
-        class="bg-green-100/80 dark:bg-green-900/40 border border-green-200 dark:border-green-800 rounded-xl p-4 mb-6 backdrop-blur-sm"
-        in:fly={{ y: -10, duration: 200 }}
-      >
-        <div class="flex items-center">
-          <div class="flex-shrink-0">
-            <svg
-              class="h-5 w-5 text-green-600 dark:text-green-400"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                clip-rule="evenodd"
-              />
-            </svg>
-          </div>
-          <div class="ml-3">
-            <p class="text-sm font-medium text-green-800 dark:text-green-200">
-              Inscription réussie ! Vérifiez vos emails.
-            </p>
-          </div>
-        </div>
+      <div class="message success" in:fly={{ y: -10, duration: 200 }}>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+        <span>Inscription réussie ! Vérifiez vos emails.</span>
       </div>
     {/if}
 
     <!-- Error Message -->
-    {#if form?.error}
-      <div
-        class="bg-red-100/80 dark:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6 backdrop-blur-sm"
-        in:fly={{ y: -10, duration: 200 }}
-      >
-        <div class="flex items-center">
-          <div class="flex-shrink-0">
-            <svg
-              class="h-5 w-5 text-red-600 dark:text-red-400"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                clip-rule="evenodd"
-              />
-            </svg>
-          </div>
-          <div class="ml-3">
-            <p class="text-sm font-medium text-red-800 dark:text-red-200">
-              {form.error}
-            </p>
-          </div>
-        </div>
+    {#if form?.error || errorMessage}
+      <div class="message error" in:fly={{ y: -10, duration: 200 }}>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <span>{form?.error || errorMessage}</span>
       </div>
     {/if}
 
@@ -146,126 +119,126 @@ function toggleMode() {
           update();
         };
       }}
-      class="space-y-6"
+      class="auth-form"
     >
-      <div class="space-y-5">
-        <div class="group">
-          <label
-            for="email-address"
-            class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 ml-1"
-            >Adresse email</label
-          >
-          <div class="relative">
-            <input
-              id="email-address"
-              name="email"
-              type="email"
-              autocomplete="email"
-              required
-              value={form?.email ?? ""}
-              class="block w-full px-4 py-3 bg-white/50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 backdrop-blur-sm group-hover:bg-white/80 dark:group-hover:bg-gray-900/80"
-              placeholder="vous@exemple.com"
-            />
-          </div>
+      <div class="input-group">
+        <label for="email-address">Adresse email</label>
+        <div class="input-wrapper">
+          <input
+            id="email-address"
+            name="email"
+            type="email"
+            autocomplete="email"
+            required
+            value={form?.email ?? ""}
+            class="text-input"
+            placeholder="vous@exemple.com"
+          />
         </div>
+      </div>
 
-        <div class="group">
-          <label
-            for="password"
-            class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 ml-1"
-            >Mot de passe</label
-          >
-          <div class="relative">
+      <div class="input-group">
+        <label for="password">Mot de passe</label>
+        <div class="input-wrapper">
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autocomplete={isLogin ? "current-password" : "new-password"}
+            required
+            class="text-input"
+            placeholder="••••••••"
+          />
+        </div>
+      </div>
+
+      {#if !isLogin}
+        <div class="input-group" transition:slide={{ duration: 300 }}>
+          <label for="confirm-password">Confirmer le mot de passe</label>
+          <div class="input-wrapper">
             <input
-              id="password"
-              name="password"
+              id="confirm-password"
+              name="confirmPassword"
               type="password"
-              autocomplete={isLogin ? "current-password" : "new-password"}
               required
-              class="block w-full px-4 py-3 bg-white/50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 backdrop-blur-sm group-hover:bg-white/80 dark:group-hover:bg-gray-900/80"
+              class="text-input"
               placeholder="••••••••"
             />
           </div>
         </div>
+      {/if}
 
-        {#if !isLogin}
-          <div class="group" transition:slide={{ duration: 300 }}>
-            <label
-              for="confirm-password"
-              class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 ml-1"
-              >Confirmer le mot de passe</label
-            >
-            <div class="relative">
-              <input
-                id="confirm-password"
-                name="confirmPassword"
-                type="password"
-                required
-                class="block w-full px-4 py-3 bg-white/50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 backdrop-blur-sm group-hover:bg-white/80 dark:group-hover:bg-gray-900/80"
-                placeholder="••••••••"
-              />
-            </div>
-          </div>
-        {/if}
-      </div>
-
-      <div class="pt-2">
-        <button
-          type="submit"
-          disabled={loading}
-          class="group relative w-full flex justify-center items-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
-        >
+      <div class="actions">
+        <button type="submit" disabled={loading} class="submit-btn primary">
           {#if loading}
-            <svg
-              class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
+            <div class="spinner"></div>
           {/if}
           <span>{isLogin ? "Se connecter" : "S'inscrire"}</span>
           {#if !loading}
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              class="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1"
-              fill="none"
+              width="18"
+              height="18"
               viewBox="0 0 24 24"
+              fill="none"
               stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13 7l5 5m0 0l-5 5m5-5H6"
-              />
+              <path d="M5 12h14" />
+              <path d="m12 5 7 7-7 7" />
             </svg>
           {/if}
         </button>
-      </div>
 
-      <div class="flex items-center justify-between mt-6">
+        <div class="divider">
+          <span>Ou continuer avec</span>
+        </div>
+
         <button
           type="button"
-          onclick={toggleMode}
-          class="w-full text-sm font-medium text-center text-gray-600 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition-colors duration-200"
+          disabled={loading}
+          onclick={handleGoogleLogin}
+          class="submit-btn google"
         >
-          {isLogin
-            ? "Pas encore de compte ? Créer un compte"
-            : "Déjà un compte ? Se connecter"}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <path
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              fill="#4285F4"
+            />
+            <path
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              fill="#34A853"
+            />
+            <path
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+              fill="#FBBC05"
+            />
+            <path
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+              fill="#EA4335"
+            />
+          </svg>
+          <span>Google</span>
+        </button>
+      </div>
+
+      <div class="footer-links">
+        {#if isLogin}
+          <span>Pas encore de compte ?</span>
+        {/if}
+        {#if !isLogin}
+          <span>Déjà un compte ?</span>
+        {/if}
+        <button type="button" onclick={toggleMode} class="toggle-btn">
+          {isLogin ? "Créer un compte" : "Se connecter"}
         </button>
       </div>
     </form>
@@ -273,10 +246,71 @@ function toggleMode() {
 </div>
 
 <style>
-  /* Animation personnalisée pour les blobs (si non gérée par Tailwind) */
-  @keyframes blob {
-    0% {
-      transform: translate(0px, 0px) scale(1);
+  .auth-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-main);
+    position: relative;
+    /* overflow: hidden; removed to allow scrolling */
+    padding: 30px 20px; /* Ensure space top/bottom */
+    color: var(--text-main);
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
+  }
+
+  /* Background Globes Animation matching theme colors */
+  .background-globes {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .globe {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.4;
+    animation: blob-bounce 10s infinite ease-in-out;
+  }
+
+  .globe-1 {
+    top: -10%;
+    left: -10%;
+    width: 50vh;
+    height: 50vh;
+    background: var(--color-primary);
+    animation-delay: 0s;
+  }
+
+  .globe-2 {
+    top: 20%;
+    right: -10%;
+    width: 60vh;
+    height: 60vh;
+    background: var(--color-accent);
+    animation-delay: 2s;
+  }
+
+  .globe-3 {
+    bottom: -20%;
+    left: 20%;
+    width: 50vh;
+    height: 50vh;
+    background: var(--color-primary-dark);
+    animation-delay: 4s;
+  }
+
+  @keyframes blob-bounce {
+    0%,
+    100% {
+      transform: translate(0, 0) scale(1);
     }
     33% {
       transform: translate(30px, -50px) scale(1.1);
@@ -284,20 +318,239 @@ function toggleMode() {
     66% {
       transform: translate(-20px, 20px) scale(0.9);
     }
-    100% {
-      transform: translate(0px, 0px) scale(1);
+  }
+
+  /* Auth Card */
+  .auth-card {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 440px;
+    margin: auto;
+    padding: 40px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    backdrop-filter: blur(10px);
+  }
+
+  .auth-header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    color: white;
+    margin-bottom: 24px;
+    transition: transform 0.3s ease;
+  }
+
+  .logo-badge:hover {
+    transform: scale(1.05);
+  }
+
+  h2 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 12px;
+    background: linear-gradient(
+      135deg,
+      var(--color-primary-dark) 0%,
+      var(--color-accent) 100%
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  :global(.dark) h2 {
+    background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .input-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .text-input {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-main);
+    font-size: 15px;
+    transition: all 0.2s ease;
+    outline: none;
+  }
+
+  .text-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    background: var(--bg-card);
+  }
+
+  .submit-btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(
+      135deg,
+      var(--color-primary) 0%,
+      var(--color-accent) 100%
+    );
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.2s ease;
+    margin-top: 8px;
+  }
+
+  .submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(102, 126, 234, 0.4);
+  }
+
+  .submit-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .submit-btn.primary {
+    background: linear-gradient(
+      135deg,
+      var(--color-primary) 0%,
+      var(--color-accent) 100%
+    );
+    color: white;
+  }
+
+  .submit-btn.google {
+    background: var(--bg-input);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    margin-top: 0;
+  }
+
+  .submit-btn.google:hover {
+    background: var(--bg-card);
+    border-color: var(--color-primary);
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 16px 0;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .divider::before,
+  .divider::after {
+    content: "";
+    flex: 1;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .divider span {
+    padding: 0 10px;
+  }
+
+  .footer-links {
+    margin-top: 16px;
+    text-align: center;
+  }
+
+  .toggle-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 14px;
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+
+  .toggle-btn:hover {
+    color: var(--color-primary);
+    text-decoration: underline;
+  }
+
+  .message {
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .message.success {
+    background: rgba(34, 197, 94, 0.1);
+    color: #15803d;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+  }
+
+  :global(.dark) .message.success {
+    color: #4ade80;
+  }
+
+  .message.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #b91c1c;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
+  :global(.dark) .message.error {
+    color: #f87171;
+  }
+
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
     }
-  }
-
-  .animate-blob {
-    animation: blob 7s infinite;
-  }
-
-  .animation-delay-2000 {
-    animation-delay: 2s;
-  }
-
-  .animation-delay-4000 {
-    animation-delay: 4s;
   }
 </style>

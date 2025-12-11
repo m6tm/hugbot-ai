@@ -1,80 +1,81 @@
 <script lang="ts">
-/**
- * Composant Sidebar - Liste des conversations et actions
- */
+  /**
+   * Composant Sidebar - Liste des conversations et actions
+   */
 
-import { onDestroy, onMount } from "svelte";
-import { enhance } from "$app/forms";
-import { goto } from "$app/navigation";
-import { page } from "$app/stores";
-import { chatStore, currentConversation, themeStore } from "$lib/stores";
-import ConversationItem from "./ConversationItem.svelte";
-import IconButton from "./ui/IconButton.svelte";
+  import { onDestroy, onMount } from "svelte";
+  import { enhance } from "$app/forms";
+  import { goto } from "$app/navigation";
+  import { chatStore, currentConversation, themeStore } from "$lib/stores";
+  import ConversationItem from "./ConversationItem.svelte";
+  import IconButton from "./ui/IconButton.svelte";
 
-let isCollapsed = $state(false);
-let isMobileOpen = $state(false);
-let isMobile = $state(false);
-let searchQuery = $state("");
-let showUserMenu = $state(false);
+  let { session } = $props();
 
-const MOBILE_BREAKPOINT = 768;
+  let isCollapsed = $state(false);
+  let isMobileOpen = $state(false);
+  let isMobile = $state(false);
+  let searchQuery = $state("");
+  let showUserMenu = $state(false);
 
-function checkMobile() {
-	isMobile = window.innerWidth < MOBILE_BREAKPOINT;
-	if (!isMobile) {
-		isMobileOpen = false;
-	}
-}
+  const MOBILE_BREAKPOINT = 768;
 
-onMount(() => {
-	checkMobile();
-	window.addEventListener("resize", checkMobile);
-});
+  function checkMobile() {
+    isMobile = window.innerWidth < MOBILE_BREAKPOINT;
+    if (!isMobile) {
+      isMobileOpen = false;
+    }
+  }
 
-onDestroy(() => {
-	if (typeof window !== "undefined") {
-		window.removeEventListener("resize", checkMobile);
-	}
-});
+  onMount(() => {
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+  });
 
-const filteredConversations = $derived(
-	$chatStore.conversations.filter((conv) =>
-		conv.title.toLowerCase().includes(searchQuery.toLowerCase()),
-	),
-);
+  onDestroy(() => {
+    if (typeof window !== "undefined") {
+      window.removeEventListener("resize", checkMobile);
+    }
+  });
 
-async function handleNewChat() {
-	await chatStore.createConversation();
-	if (isMobile) {
-		isMobileOpen = false;
-	}
-}
+  const filteredConversations = $derived(
+    $chatStore.conversations.filter((conv) =>
+      conv.title.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  );
 
-function toggleSidebar() {
-	if (isMobile) {
-		isMobileOpen = !isMobileOpen;
-	} else {
-		isCollapsed = !isCollapsed;
-	}
-}
+  async function handleNewChat() {
+    await chatStore.createConversation();
+    if (isMobile) {
+      isMobileOpen = false;
+    }
+  }
 
-function closeMobileSidebar() {
-	isMobileOpen = false;
-}
+  function toggleSidebar() {
+    if (isMobile) {
+      isMobileOpen = !isMobileOpen;
+    } else {
+      isCollapsed = !isCollapsed;
+    }
+  }
 
-function toggleUserMenu() {
-	showUserMenu = !showUserMenu;
-}
+  function closeMobileSidebar() {
+    isMobileOpen = false;
+  }
 
-function handleClearAllConversations() {
-	showUserMenu = false;
-}
+  function toggleUserMenu() {
+    showUserMenu = !showUserMenu;
+  }
 
-function handleConversationClick() {
-	if (isMobile) {
-		isMobileOpen = false;
-	}
-}
+  function handleClearAllConversations() {
+    showUserMenu = false;
+  }
+
+  function handleConversationClick() {
+    if (isMobile) {
+      isMobileOpen = false;
+    }
+  }
 </script>
 
 <!-- Bouton mobile visible uniquement sur petit ecran -->
@@ -251,12 +252,18 @@ function handleConversationClick() {
       </div>
       {#if !isCollapsed}
         <span class="username truncate"
-          >{$page.data.session?.user?.email ?? "Invité"}</span
+          >{session?.user?.user_metadata.name ?? "Invité"}</span
         >
       {/if}
 
       {#if showUserMenu}
-        <div class="user-menu" class:collapsed={isCollapsed}>
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div
+          class="user-menu"
+          class:collapsed={isCollapsed}
+          onclick={(e) => e.stopPropagation()}
+          onkeydown={(e) => e.stopPropagation()}
+        >
           <button class="menu-item" onclick={() => themeStore.toggle()}>
             {#if $themeStore.isDark}
               <svg
@@ -355,7 +362,7 @@ function handleConversationClick() {
 
           <div class="menu-divider"></div>
 
-          {#if $page.data.session}
+          {#if session}
             <form action="/auth?/logout" method="POST" use:enhance>
               <button class="menu-item danger" type="submit">
                 <svg
