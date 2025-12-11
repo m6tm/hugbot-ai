@@ -1,13 +1,14 @@
-import type { Document } from "@langchain/core/documents";
-import { AppVectorStore } from "./vectorStore";
+import { browser } from "$app/environment";
 
+/**
+ * Service RAG côté client
+ * Appelle les endpoints API serveur pour le traitement langchain
+ */
 export class RAGService {
 	private static instance: RAGService;
-	private vectorStore: AppVectorStore;
+	private readonly STORAGE_KEY = "chat_ai_rag_index";
 
-	private constructor() {
-		this.vectorStore = AppVectorStore.getInstance();
-	}
+	private constructor() {}
 
 	public static getInstance(): RAGService {
 		if (!RAGService.instance) {
@@ -17,39 +18,91 @@ export class RAGService {
 	}
 
 	/**
-	 * Add a document to the knowledge base.
+	 * Récupère les données d'index stockées localement
 	 */
-	async addDocument(text: string): Promise<void> {
-		const doc: Document = {
-			pageContent: text,
-			metadata: { source: "user-input", createdAt: new Date().toISOString() },
-		};
-		await this.vectorStore.addDocuments([doc]);
+	private getStoredIndexData(): string | null {
+		if (!browser) return null;
+		return localStorage.getItem(this.STORAGE_KEY);
 	}
 
 	/**
-	 * Retrieve relevant documents for a given query.
+	 * Sauvegarde les données d'index localement
+	 */
+	private saveIndexData(indexData: string | null): void {
+		if (!browser || !indexData) return;
+		localStorage.setItem(this.STORAGE_KEY, indexData);
+	}
+
+	/**
+	 * Ajouter un document à la base de connaissances
+	 */
+	async addDocument(text: string): Promise<void> {
+		try {
+			const response = await fetch("/api/rag/add", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					text,
+					indexData: this.getStoredIndexData(),
+				}),
+			});
+
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || "Erreur lors de l'ajout");
+			}
+
+			const result = await response.json();
+			this.saveIndexData(result.indexData);
+		} catch (error) {
+			console.error("RAG addDocument failed:", error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Récupérer le contexte pertinent pour une requête
 	 */
 	async retrieveContext(query: string, k: number = 4): Promise<string> {
 		try {
-			const results = await this.vectorStore.similaritySearch(query, k);
+			const indexData = this.getStoredIndexData();
 
-			if (results.length === 0) {
+			// Si pas de données d'index, retourner une chaîne vide
+			if (!indexData) {
 				return "";
 			}
 
-			const context = results
-				.map((doc: Document) => doc.pageContent)
-				.join("\n\n---\n\n");
-			return `Context information is below.\n---------------------\n${context}\n---------------------\nGiven the context information and not prior knowledge, answer the query.`;
+			const response = await fetch("/api/rag/retrieve", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					query,
+					k,
+					indexData,
+				}),
+			});
+
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || "Erreur lors de la récupération");
+			}
+
+			const result = await response.json();
+
+			// Mettre à jour l'index si nécessaire
+			if (result.indexData) {
+				this.saveIndexData(result.indexData);
+			}
+
+			return result.context || "";
 		} catch (error) {
-			console.error("RAG Retrieval failed:", error);
+			console.error("RAG retrieveContext failed:", error);
 			return "";
 		}
 	}
 
 	/**
-	 * Enhanced prompt construction (optional, if we want full prompt)
+	 * Construction de prompt enrichi
 	 */
 	async constructPrompt(query: string): Promise<string> {
 		const contextBlock = await this.retrieveContext(query);

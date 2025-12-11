@@ -1,80 +1,80 @@
 <script lang="ts">
-  /**
-   * Composant ChatInput - Zone de saisie du message
-   */
-  import { chatStore, uiStore } from "$lib/stores";
-  import IconButton from "./ui/IconButton.svelte";
+/**
+ * Composant ChatInput - Zone de saisie du message
+ */
+import { chatStore, uiStore } from "$lib/stores";
+import IconButton from "./ui/IconButton.svelte";
 
-  let message = $state("");
-  let textareaRef: HTMLTextAreaElement;
+let message = $state("");
+let textareaRef: HTMLTextAreaElement;
 
-  const isEditing = $derived($uiStore.editingMessage !== null);
-  const isDisabled = $derived($chatStore.isStreaming || !message.trim());
+const isEditing = $derived($uiStore.editingMessage !== null);
+const isDisabled = $derived($chatStore.isStreaming || !message.trim());
 
-  // Ecoute les evenements de focus depuis le uiStore
-  $effect(() => {
-    const trigger = $uiStore.focusChatInputTrigger;
-    if (trigger > 0 && textareaRef) {
-      setTimeout(() => {
-        textareaRef?.focus();
-      }, 100);
-    }
-  });
+// Ecoute les evenements de focus depuis le uiStore
+$effect(() => {
+	const trigger = $uiStore.focusChatInputTrigger;
+	if (trigger > 0 && textareaRef) {
+		setTimeout(() => {
+			textareaRef?.focus();
+		}, 100);
+	}
+});
 
-  // Charge le contenu du message a editer
-  $effect(() => {
-    const editingMessage = $uiStore.editingMessage;
-    if (editingMessage) {
-      message = editingMessage.content;
-      adjustTextareaHeight();
-    }
-  });
+// Charge le contenu du message a editer
+$effect(() => {
+	const editingMessage = $uiStore.editingMessage;
+	if (editingMessage) {
+		message = editingMessage.content;
+		adjustTextareaHeight();
+	}
+});
 
-  async function handleSubmit(e?: SubmitEvent) {
-    e?.preventDefault();
-    if (isDisabled) return;
+async function handleSubmit(e?: SubmitEvent) {
+	e?.preventDefault();
+	if (isDisabled) return;
 
-    const content = message.trim();
-    if (!content) return;
+	const content = message.trim();
+	if (!content) return;
 
-    const editingMessage = $uiStore.editingMessage;
+	const editingMessage = $uiStore.editingMessage;
 
-    message = "";
-    resetTextareaHeight();
+	message = "";
+	resetTextareaHeight();
 
-    if (editingMessage) {
-      uiStore.cancelEditMessage();
-      await chatStore.editMessage(editingMessage.messageId, content);
-    } else {
-      await chatStore.sendMessage(content);
-    }
-  }
+	if (editingMessage) {
+		uiStore.cancelEditMessage();
+		await chatStore.editMessage(editingMessage.messageId, content);
+	} else {
+		await chatStore.sendMessage(content);
+	}
+}
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
-    } else if (e.key === "Escape" && isEditing) {
-      cancelEdit();
-    }
-  }
+function handleKeydown(e: KeyboardEvent) {
+	if (e.key === "Enter" && !e.shiftKey) {
+		e.preventDefault();
+		handleSubmit();
+	} else if (e.key === "Escape" && isEditing) {
+		cancelEdit();
+	}
+}
 
-  function cancelEdit() {
-    uiStore.cancelEditMessage();
-    message = "";
-    resetTextareaHeight();
-  }
+function cancelEdit() {
+	uiStore.cancelEditMessage();
+	message = "";
+	resetTextareaHeight();
+}
 
-  function adjustTextareaHeight() {
-    if (!textareaRef) return;
-    textareaRef.style.height = "auto";
-    textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`;
-  }
+function adjustTextareaHeight() {
+	if (!textareaRef) return;
+	textareaRef.style.height = "auto";
+	textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`;
+}
 
-  function resetTextareaHeight() {
-    if (!textareaRef) return;
-    textareaRef.style.height = "auto";
-  }
+function resetTextareaHeight() {
+	if (!textareaRef) return;
+	textareaRef.style.height = "auto";
+}
 </script>
 
 <form class="chat-input-container" onsubmit={handleSubmit}>

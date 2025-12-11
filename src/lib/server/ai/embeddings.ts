@@ -4,6 +4,7 @@ import type { FeatureExtractionPipeline } from "@xenova/transformers";
 /**
  * Custom Embeddings class using local Transformers.js models.
  * This ensures no API calls are made for embedding generation.
+ * SERVEUR UNIQUEMENT - Ne pas importer côté client.
  */
 export class LocalEmbeddings extends Embeddings {
 	private static instance: LocalEmbeddings;

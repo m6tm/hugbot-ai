@@ -16,454 +16,454 @@ import { integrationsStore } from "./integrations.store";
 import { settingsStore } from "./settings.store";
 
 interface ChatState {
-  conversations: Conversation[];
-  currentConversationId: string | null;
-  isLoading: boolean;
-  isStreaming: boolean;
-  streamingContent: string;
-  error: string | null;
+	conversations: Conversation[];
+	currentConversationId: string | null;
+	isLoading: boolean;
+	isStreaming: boolean;
+	streamingContent: string;
+	error: string | null;
 }
 
 const initialState: ChatState = {
-  conversations: [],
-  currentConversationId: null,
-  isLoading: false,
-  isStreaming: false,
-  streamingContent: "",
-  error: null,
+	conversations: [],
+	currentConversationId: null,
+	isLoading: false,
+	isStreaming: false,
+	streamingContent: "",
+	error: null,
 };
 
 function createChatStore() {
-  const { subscribe, set, update } = writable<ChatState>(initialState);
+	const { subscribe, set, update } = writable<ChatState>(initialState);
 
-  const storage = new DexieStorageAdapter();
-  const mockAdapter = new MockChatAdapter();
-  const huggingFaceAdapter = new HuggingFaceAdapter({
-    apiKey: "",
-    modelId: "",
-  });
+	const storage = new DexieStorageAdapter();
+	const mockAdapter = new MockChatAdapter();
+	const huggingFaceAdapter = new HuggingFaceAdapter({
+		apiKey: "",
+		modelId: "",
+	});
 
-  /**
-   * Recupere le bon adaptateur selon les parametres
-   */
-  function getChatService(): ChatServicePort {
-    const settings = get(settingsStore);
-    const model = getModelById(settings.currentModelId);
+	/**
+	 * Recupere le bon adaptateur selon les parametres
+	 */
+	function getChatService(): ChatServicePort {
+		const settings = get(settingsStore);
+		const model = getModelById(settings.currentModelId);
 
-    if (!model || model.provider === "mock") {
-      return mockAdapter;
-    }
+		if (!model || model.provider === "mock") {
+			return mockAdapter;
+		}
 
-    if (model.provider === "huggingface") {
-      huggingFaceAdapter.setApiKey(settings.apiKey);
-      huggingFaceAdapter.setModel(model.modelId);
-      return huggingFaceAdapter;
-    }
+		if (model.provider === "huggingface") {
+			huggingFaceAdapter.setApiKey(settings.apiKey);
+			huggingFaceAdapter.setModel(model.modelId);
+			return huggingFaceAdapter;
+		}
 
-    return mockAdapter;
-  }
+		return mockAdapter;
+	}
 
-  /**
-   * Cree un ChatUseCase avec le bon service
-   */
-  function createUseCase(): ChatUseCase {
-    return new ChatUseCase(storage, getChatService());
-  }
+	/**
+	 * Cree un ChatUseCase avec le bon service
+	 */
+	function createUseCase(): ChatUseCase {
+		return new ChatUseCase(storage, getChatService());
+	}
 
-  return {
-    subscribe,
+	return {
+		subscribe,
 
-    /**
-     * Initialise le store avec les conversations existantes
-     */
-    async init() {
-      update((state) => ({ ...state, isLoading: true }));
-      try {
-        const chatUseCase = createUseCase();
-        const conversations = await chatUseCase.getConversations();
-        update((state) => ({
-          ...state,
-          conversations,
-          isLoading: false,
-        }));
-      } catch (error) {
-        update((state) => ({
-          ...state,
-          error: (error as Error).message,
-          isLoading: false,
-        }));
-      }
-    },
+		/**
+		 * Initialise le store avec les conversations existantes
+		 */
+		async init() {
+			update((state) => ({ ...state, isLoading: true }));
+			try {
+				const chatUseCase = createUseCase();
+				const conversations = await chatUseCase.getConversations();
+				update((state) => ({
+					...state,
+					conversations,
+					isLoading: false,
+				}));
+			} catch (error) {
+				update((state) => ({
+					...state,
+					error: (error as Error).message,
+					isLoading: false,
+				}));
+			}
+		},
 
-    /**
-     * Cree une nouvelle conversation
-     * Si la conversation actuelle est vide (aucun message), on la reutilise
-     */
-    async createConversation() {
-      const currentState = get({ subscribe });
+		/**
+		 * Cree une nouvelle conversation
+		 * Si la conversation actuelle est vide (aucun message), on la reutilise
+		 */
+		async createConversation() {
+			const currentState = get({ subscribe });
 
-      // Verifie si la conversation actuelle existe et n'a aucun message
-      if (currentState.currentConversationId) {
-        const currentConv = currentState.conversations.find(
-          (c) => c.id === currentState.currentConversationId
-        );
-        if (currentConv && currentConv.messages.length === 0) {
-          return currentConv;
-        }
-      }
+			// Verifie si la conversation actuelle existe et n'a aucun message
+			if (currentState.currentConversationId) {
+				const currentConv = currentState.conversations.find(
+					(c) => c.id === currentState.currentConversationId,
+				);
+				if (currentConv && currentConv.messages.length === 0) {
+					return currentConv;
+				}
+			}
 
-      try {
-        const chatUseCase = createUseCase();
-        const conversation = await chatUseCase.createNewConversation();
-        update((state) => ({
-          ...state,
-          conversations: [conversation, ...state.conversations],
-          currentConversationId: conversation.id,
-        }));
-        return conversation;
-      } catch (error) {
-        update((state) => ({
-          ...state,
-          error: (error as Error).message,
-        }));
-        return null;
-      }
-    },
+			try {
+				const chatUseCase = createUseCase();
+				const conversation = await chatUseCase.createNewConversation();
+				update((state) => ({
+					...state,
+					conversations: [conversation, ...state.conversations],
+					currentConversationId: conversation.id,
+				}));
+				return conversation;
+			} catch (error) {
+				update((state) => ({
+					...state,
+					error: (error as Error).message,
+				}));
+				return null;
+			}
+		},
 
-    /**
-     * Selectionne une conversation
-     */
-    selectConversation(id: string) {
-      update((state) => ({
-        ...state,
-        currentConversationId: id,
-      }));
-    },
+		/**
+		 * Selectionne une conversation
+		 */
+		selectConversation(id: string) {
+			update((state) => ({
+				...state,
+				currentConversationId: id,
+			}));
+		},
 
-    /**
-     * Supprime une conversation
-     */
-    async deleteConversation(id: string) {
-      try {
-        const chatUseCase = createUseCase();
-        await chatUseCase.deleteConversation(id);
-        update((state) => {
-          const newConversations = state.conversations.filter(
-            (c) => c.id !== id
-          );
-          return {
-            ...state,
-            conversations: newConversations,
-            currentConversationId:
-              state.currentConversationId === id
-                ? newConversations[0]?.id || null
-                : state.currentConversationId,
-          };
-        });
-      } catch (error) {
-        update((state) => ({
-          ...state,
-          error: (error as Error).message,
-        }));
-      }
-    },
+		/**
+		 * Supprime une conversation
+		 */
+		async deleteConversation(id: string) {
+			try {
+				const chatUseCase = createUseCase();
+				await chatUseCase.deleteConversation(id);
+				update((state) => {
+					const newConversations = state.conversations.filter(
+						(c) => c.id !== id,
+					);
+					return {
+						...state,
+						conversations: newConversations,
+						currentConversationId:
+							state.currentConversationId === id
+								? newConversations[0]?.id || null
+								: state.currentConversationId,
+					};
+				});
+			} catch (error) {
+				update((state) => ({
+					...state,
+					error: (error as Error).message,
+				}));
+			}
+		},
 
-    /**
-     * Envoie un message (utilise le modele actuellement selectionne)
-     */
-    async sendMessage(content: string) {
-      const state = get({ subscribe });
+		/**
+		 * Envoie un message (utilise le modele actuellement selectionne)
+		 */
+		async sendMessage(content: string) {
+			const state = get({ subscribe });
 
-      if (!state.currentConversationId) {
-        const conversation = await this.createConversation();
-        if (!conversation) return;
-      }
+			if (!state.currentConversationId) {
+				const conversation = await this.createConversation();
+				if (!conversation) return;
+			}
 
-      const currentState = get({ subscribe });
-      const conversationId = currentState.currentConversationId;
+			const currentState = get({ subscribe });
+			const conversationId = currentState.currentConversationId;
 
-      if (!conversationId) {
-        throw new Error("Aucune conversation active");
-      }
+			if (!conversationId) {
+				throw new Error("Aucune conversation active");
+			}
 
-      const conversation = currentState.conversations.find(
-        (c) => c.id === conversationId
-      );
+			const conversation = currentState.conversations.find(
+				(c) => c.id === conversationId,
+			);
 
-      if (!conversation) {
-        throw new Error("Conversation introuvable");
-      }
+			if (!conversation) {
+				throw new Error("Conversation introuvable");
+			}
 
-      const settings = get(settingsStore);
+			const settings = get(settingsStore);
 
-      update((s) => ({
-        ...s,
-        isStreaming: true,
-        streamingContent: "",
-      }));
+			update((s) => ({
+				...s,
+				isStreaming: true,
+				streamingContent: "",
+			}));
 
-      try {
-        const chatUseCase = createUseCase();
+			try {
+				const chatUseCase = createUseCase();
 
-        // RAG Integration
-        const ragService = RAGService.getInstance();
-        const context = await ragService.retrieveContext(content);
+				// RAG Integration
+				const ragService = RAGService.getInstance();
+				const context = await ragService.retrieveContext(content);
 
-        let systemInstructionToUse = settings.systemInstruction;
-        if (context) {
-          console.log("RAG Context retrieved:", context);
-          systemInstructionToUse = `${systemInstructionToUse}\n\n${context}`;
-        }
+				let systemInstructionToUse = settings.systemInstruction;
+				if (context) {
+					console.log("RAG Context retrieved:", context);
+					systemInstructionToUse = `${systemInstructionToUse}\n\n${context}`;
+				}
 
-        const { userMessage, assistantMessage } = await chatUseCase.sendMessage(
-          conversation,
-          content,
-          {
-            stream: true,
-            temperature: settings.temperature,
-            maxTokens: settings.maxTokens,
-            systemInstruction: systemInstructionToUse,
-          },
-          (chunk) => {
-            update((s) => ({
-              ...s,
-              streamingContent: s.streamingContent + chunk,
-            }));
-          }
-        );
+				const { userMessage, assistantMessage } = await chatUseCase.sendMessage(
+					conversation,
+					content,
+					{
+						stream: true,
+						temperature: settings.temperature,
+						maxTokens: settings.maxTokens,
+						systemInstruction: systemInstructionToUse,
+					},
+					(chunk) => {
+						update((s) => ({
+							...s,
+							streamingContent: s.streamingContent + chunk,
+						}));
+					},
+				);
 
-        update((s) => {
-          const conversations = s.conversations.map((conv) => {
-            if (conv.id === conversationId) {
-              return {
-                ...conv,
-                messages: [
-                  ...conv.messages.filter(
-                    (m) =>
-                      m.id !== userMessage.id && m.id !== assistantMessage.id
-                  ),
-                  userMessage,
-                  assistantMessage,
-                ],
-                title:
-                  conv.messages.length === 0
-                    ? content.substring(0, 40)
-                    : conv.title,
-                updatedAt: new Date(),
-              };
-            }
-            return conv;
-          });
+				update((s) => {
+					const conversations = s.conversations.map((conv) => {
+						if (conv.id === conversationId) {
+							return {
+								...conv,
+								messages: [
+									...conv.messages.filter(
+										(m) =>
+											m.id !== userMessage.id && m.id !== assistantMessage.id,
+									),
+									userMessage,
+									assistantMessage,
+								],
+								title:
+									conv.messages.length === 0
+										? content.substring(0, 40)
+										: conv.title,
+								updatedAt: new Date(),
+							};
+						}
+						return conv;
+					});
 
-          return {
-            ...s,
-            conversations,
-            isStreaming: false,
-            streamingContent: "",
-          };
-        });
+					return {
+						...s,
+						conversations,
+						isStreaming: false,
+						streamingContent: "",
+					};
+				});
 
-        // Envoyer une notification Telegram si configurée
-        try {
-          const integrations = get(integrationsStore);
-          if (integrations.telegram.enabled) {
-            await telegramService.updateConfig(integrations.telegram);
-            await telegramService.notifyNewMessage(
-              content,
-              assistantMessage.content
-            );
-          }
-        } catch (telegramError) {
-          console.warn(
-            "Erreur lors de l'envoi de notification Telegram:",
-            telegramError
-          );
-        }
-      } catch (error) {
-        update((s) => ({
-          ...s,
-          error: (error as Error).message,
-          isStreaming: false,
-          streamingContent: "",
-        }));
+				// Envoyer une notification Telegram si configurée
+				try {
+					const integrations = get(integrationsStore);
+					if (integrations.telegram.enabled) {
+						await telegramService.updateConfig(integrations.telegram);
+						await telegramService.notifyNewMessage(
+							content,
+							assistantMessage.content,
+						);
+					}
+				} catch (telegramError) {
+					console.warn(
+						"Erreur lors de l'envoi de notification Telegram:",
+						telegramError,
+					);
+				}
+			} catch (error) {
+				update((s) => ({
+					...s,
+					error: (error as Error).message,
+					isStreaming: false,
+					streamingContent: "",
+				}));
 
-        // Envoyer une notification d'erreur Telegram si configurée
-        try {
-          const integrations = get(integrationsStore);
-          if (
-            integrations.telegram.enabled &&
-            integrations.telegram.sendOnError
-          ) {
-            await telegramService.updateConfig(integrations.telegram);
-            await telegramService.notifyError(
-              (error as Error).message,
-              "Envoi de message"
-            );
-          }
-        } catch (telegramError) {
-          console.warn(
-            "Erreur lors de l'envoi de notification d'erreur Telegram:",
-            telegramError
-          );
-        }
-      }
-    },
+				// Envoyer une notification d'erreur Telegram si configurée
+				try {
+					const integrations = get(integrationsStore);
+					if (
+						integrations.telegram.enabled &&
+						integrations.telegram.sendOnError
+					) {
+						await telegramService.updateConfig(integrations.telegram);
+						await telegramService.notifyError(
+							(error as Error).message,
+							"Envoi de message",
+						);
+					}
+				} catch (telegramError) {
+					console.warn(
+						"Erreur lors de l'envoi de notification d'erreur Telegram:",
+						telegramError,
+					);
+				}
+			}
+		},
 
-    /**
-     * Regenere une reponse de l'assistant a partir d'un message specifique
-     * Supprime le message assistant et renvoie le message utilisateur qui le precede
-     */
-    async regenerateMessage(assistantMessageId: string) {
-      const currentState = get({ subscribe });
-      const conversationId = currentState.currentConversationId;
+		/**
+		 * Regenere une reponse de l'assistant a partir d'un message specifique
+		 * Supprime le message assistant et renvoie le message utilisateur qui le precede
+		 */
+		async regenerateMessage(assistantMessageId: string) {
+			const currentState = get({ subscribe });
+			const conversationId = currentState.currentConversationId;
 
-      if (!conversationId) {
-        throw new Error("Aucune conversation active");
-      }
+			if (!conversationId) {
+				throw new Error("Aucune conversation active");
+			}
 
-      const conversation = currentState.conversations.find(
-        (c) => c.id === conversationId
-      );
+			const conversation = currentState.conversations.find(
+				(c) => c.id === conversationId,
+			);
 
-      if (!conversation || conversation.messages.length < 2) {
-        throw new Error("Pas assez de messages pour regenerer");
-      }
+			if (!conversation || conversation.messages.length < 2) {
+				throw new Error("Pas assez de messages pour regenerer");
+			}
 
-      // Trouve l'index du message assistant a regenerer
-      const messages = [...conversation.messages];
-      const assistantMessageIndex = messages.findIndex(
-        (m) => m.id === assistantMessageId
-      );
+			// Trouve l'index du message assistant a regenerer
+			const messages = [...conversation.messages];
+			const assistantMessageIndex = messages.findIndex(
+				(m) => m.id === assistantMessageId,
+			);
 
-      if (assistantMessageIndex === -1) {
-        throw new Error("Message introuvable");
-      }
+			if (assistantMessageIndex === -1) {
+				throw new Error("Message introuvable");
+			}
 
-      // Trouve le message utilisateur qui precede ce message assistant
-      let userMessageIndex = -1;
-      for (let i = assistantMessageIndex - 1; i >= 0; i--) {
-        if (messages[i].role === "user") {
-          userMessageIndex = i;
-          break;
-        }
-      }
+			// Trouve le message utilisateur qui precede ce message assistant
+			let userMessageIndex = -1;
+			for (let i = assistantMessageIndex - 1; i >= 0; i--) {
+				if (messages[i].role === "user") {
+					userMessageIndex = i;
+					break;
+				}
+			}
 
-      if (userMessageIndex === -1) {
-        throw new Error("Aucun message utilisateur trouve avant ce message");
-      }
+			if (userMessageIndex === -1) {
+				throw new Error("Aucun message utilisateur trouve avant ce message");
+			}
 
-      const userMessageContent = messages[userMessageIndex].content;
+			const userMessageContent = messages[userMessageIndex].content;
 
-      // Supprime tous les messages a partir du message utilisateur (inclus)
-      const messagesBeforeUser = messages.slice(0, userMessageIndex);
+			// Supprime tous les messages a partir du message utilisateur (inclus)
+			const messagesBeforeUser = messages.slice(0, userMessageIndex);
 
-      // Met a jour la conversation avec les messages tronques
-      update((state) => ({
-        ...state,
-        conversations: state.conversations.map((conv) =>
-          conv.id === conversationId
-            ? { ...conv, messages: messagesBeforeUser }
-            : conv
-        ),
-      }));
+			// Met a jour la conversation avec les messages tronques
+			update((state) => ({
+				...state,
+				conversations: state.conversations.map((conv) =>
+					conv.id === conversationId
+						? { ...conv, messages: messagesBeforeUser }
+						: conv,
+				),
+			}));
 
-      // Renvoie le message
-      await this.sendMessage(userMessageContent);
-    },
+			// Renvoie le message
+			await this.sendMessage(userMessageContent);
+		},
 
-    /**
-     * Modifie un message utilisateur et regenere la reponse
-     * Supprime tous les messages apres le message modifie
-     */
-    async editMessage(messageId: string, newContent: string) {
-      const currentState = get({ subscribe });
-      const conversationId = currentState.currentConversationId;
+		/**
+		 * Modifie un message utilisateur et regenere la reponse
+		 * Supprime tous les messages apres le message modifie
+		 */
+		async editMessage(messageId: string, newContent: string) {
+			const currentState = get({ subscribe });
+			const conversationId = currentState.currentConversationId;
 
-      if (!conversationId) {
-        throw new Error("Aucune conversation active");
-      }
+			if (!conversationId) {
+				throw new Error("Aucune conversation active");
+			}
 
-      const conversation = currentState.conversations.find(
-        (c) => c.id === conversationId
-      );
+			const conversation = currentState.conversations.find(
+				(c) => c.id === conversationId,
+			);
 
-      if (!conversation) {
-        throw new Error("Conversation introuvable");
-      }
+			if (!conversation) {
+				throw new Error("Conversation introuvable");
+			}
 
-      // Trouve l'index du message a modifier
-      const messageIndex = conversation.messages.findIndex(
-        (m) => m.id === messageId
-      );
+			// Trouve l'index du message a modifier
+			const messageIndex = conversation.messages.findIndex(
+				(m) => m.id === messageId,
+			);
 
-      if (messageIndex === -1) {
-        throw new Error("Message introuvable");
-      }
+			if (messageIndex === -1) {
+				throw new Error("Message introuvable");
+			}
 
-      // Supprime tous les messages a partir de l'index du message modifie
-      const messagesBeforeEdit = conversation.messages.slice(0, messageIndex);
+			// Supprime tous les messages a partir de l'index du message modifie
+			const messagesBeforeEdit = conversation.messages.slice(0, messageIndex);
 
-      // Met a jour la conversation avec les messages tronques
-      update((state) => ({
-        ...state,
-        conversations: state.conversations.map((conv) =>
-          conv.id === conversationId
-            ? { ...conv, messages: messagesBeforeEdit }
-            : conv
-        ),
-      }));
+			// Met a jour la conversation avec les messages tronques
+			update((state) => ({
+				...state,
+				conversations: state.conversations.map((conv) =>
+					conv.id === conversationId
+						? { ...conv, messages: messagesBeforeEdit }
+						: conv,
+				),
+			}));
 
-      // Envoie le nouveau message
-      await this.sendMessage(newContent);
-    },
+			// Envoie le nouveau message
+			await this.sendMessage(newContent);
+		},
 
-    /**
-     * Renomme une conversation
-     */
-    async renameConversation(id: string, newTitle: string) {
-      try {
-        const chatUseCase = createUseCase();
-        await chatUseCase.renameConversation(id, newTitle);
-        update((state) => ({
-          ...state,
-          conversations: state.conversations.map((conv) =>
-            conv.id === id ? { ...conv, title: newTitle } : conv
-          ),
-        }));
-      } catch (error) {
-        update((state) => ({
-          ...state,
-          error: (error as Error).message,
-        }));
-      }
-    },
+		/**
+		 * Renomme une conversation
+		 */
+		async renameConversation(id: string, newTitle: string) {
+			try {
+				const chatUseCase = createUseCase();
+				await chatUseCase.renameConversation(id, newTitle);
+				update((state) => ({
+					...state,
+					conversations: state.conversations.map((conv) =>
+						conv.id === id ? { ...conv, title: newTitle } : conv,
+					),
+				}));
+			} catch (error) {
+				update((state) => ({
+					...state,
+					error: (error as Error).message,
+				}));
+			}
+		},
 
-    /**
-     * Efface l'erreur
-     */
-    clearError() {
-      update((state) => ({ ...state, error: null }));
-    },
+		/**
+		 * Efface l'erreur
+		 */
+		clearError() {
+			update((state) => ({ ...state, error: null }));
+		},
 
-    /**
-     * Reset le store
-     */
-    reset() {
-      set(initialState);
-    },
-  };
+		/**
+		 * Reset le store
+		 */
+		reset() {
+			set(initialState);
+		},
+	};
 }
 
 export const chatStore = createChatStore();
 
 export const currentConversation = derived(chatStore, ($store) => {
-  if (!$store.currentConversationId) return null;
-  return (
-    $store.conversations.find((c) => c.id === $store.currentConversationId) ||
-    null
-  );
+	if (!$store.currentConversationId) return null;
+	return (
+		$store.conversations.find((c) => c.id === $store.currentConversationId) ||
+		null
+	);
 });
 
 export const currentMessages = derived(currentConversation, ($conversation) => {
-  return $conversation?.messages || [];
+	return $conversation?.messages || [];
 });
