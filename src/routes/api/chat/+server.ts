@@ -10,6 +10,8 @@ import {
 	canGuestSendMessage,
 	incrementGuestMessageCount,
 } from "$lib/infrastructure/services/guestLimit.service";
+import { decrypt } from "$lib/server/crypto";
+import { db } from "$lib/server/db";
 import type { RequestHandler } from "./$types";
 
 interface ChatMessage {
@@ -25,6 +27,7 @@ interface ChatRequest {
 	apiKey?: string;
 	stream?: boolean;
 	fingerprint?: string;
+	conversationId?: string;
 }
 
 /**
@@ -58,7 +61,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	try {
 		const body: ChatRequest = await request.json();
 
-		const { session } = await locals.safeGetSession();
+		const { session, user } = await locals.safeGetSession();
 
 		if (!session) {
 			const clientIp = getClientIp(request);
@@ -81,6 +84,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 			await incrementGuestMessageCount(guestId);
 		}
+
 		const {
 			messages,
 			modelId,
@@ -88,10 +92,32 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			maxTokens = 1024,
 			apiKey,
 			stream = false,
+			conversationId,
 		} = body;
 
-		// Utilise la cle de l'utilisateur si fournie, sinon la cle du serveur
-		const effectiveApiKey = apiKey || env.HUGGINGFACE_API_KEY;
+		// Utilise la cle de l'utilisateur si fournie, sinon celle en BDD ou celle du serveur
+		let effectiveApiKey = apiKey;
+
+		// Si connecte, recuperer la cle chiffrée ou utiliser la clé fournie
+		if (user && !effectiveApiKey) {
+			const userData = await db.user.findUnique({
+				where: { id: user.id },
+				select: { huggingFaceKey: true },
+			});
+
+			if (userData?.huggingFaceKey) {
+				try {
+					effectiveApiKey = decrypt(userData.huggingFaceKey);
+				} catch (e) {
+					console.error("Failed to decrypt user key", e);
+				}
+			}
+		}
+
+		// Fallback serveur
+		if (!effectiveApiKey) {
+			effectiveApiKey = env.HUGGINGFACE_API_KEY;
+		}
 
 		if (!effectiveApiKey) {
 			return new Response(
@@ -104,6 +130,35 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					headers: { "Content-Type": "application/json" },
 				},
 			);
+		}
+
+		// Gestion de la persistence (seulement si connecte)
+		let currentConversationId = conversationId;
+		if (session && user) {
+			if (!currentConversationId) {
+				// Nouvelle conversation
+				const title =
+					messages[0]?.content.slice(0, 50) || "Nouvelle conversation";
+				const conv = await db.conversation.create({
+					data: {
+						userId: user.id,
+						title: title,
+					},
+				});
+				currentConversationId = conv.id;
+			}
+
+			// Sauvegarder le message utilisateur
+			const lastMessage = messages[messages.length - 1];
+			if (lastMessage && lastMessage.role === "user" && currentConversationId) {
+				await db.message.create({
+					data: {
+						conversationId: currentConversationId,
+						role: "user",
+						content: lastMessage.content,
+					},
+				});
+			}
 		}
 
 		const client = new OpenAI({
@@ -127,6 +182,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			});
 
 			const encoder = new TextEncoder();
+			let accumulatedContent = "";
 
 			const readableStream = new ReadableStream({
 				async start(controller) {
@@ -134,11 +190,29 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 						for await (const chunk of streamResponse) {
 							const content = chunk.choices[0]?.delta?.content;
 							if (content) {
+								accumulatedContent += content;
 								// Format SSE
 								const data = `data: ${JSON.stringify({ content })}\n\n`;
 								controller.enqueue(encoder.encode(data));
 							}
 						}
+
+						// Sauvegarde de la reponse assistant si connecte
+						if (
+							session &&
+							user &&
+							currentConversationId &&
+							accumulatedContent
+						) {
+							await db.message.create({
+								data: {
+									conversationId: currentConversationId,
+									role: "assistant",
+									content: accumulatedContent,
+								},
+							});
+						}
+
 						// Signal de fin
 						controller.enqueue(encoder.encode("data: [DONE]\n\n"));
 						controller.close();
@@ -157,6 +231,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					"Content-Type": "text/event-stream",
 					"Cache-Control": "no-cache",
 					Connection: "keep-alive",
+					// Send conversation ID in header for client to update URL if needed
+					"X-Conversation-Id": currentConversationId || "",
 				},
 			});
 		}
@@ -178,9 +254,26 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			});
 		}
 
-		return new Response(JSON.stringify({ content: content.trim() }), {
-			headers: { "Content-Type": "application/json" },
-		});
+		// Sauvegarder reponse en non-streaming
+		if (session && user && currentConversationId) {
+			await db.message.create({
+				data: {
+					conversationId: currentConversationId,
+					role: "assistant",
+					content: content,
+				},
+			});
+		}
+
+		return new Response(
+			JSON.stringify({
+				content: content.trim(),
+				conversationId: currentConversationId,
+			}),
+			{
+				headers: { "Content-Type": "application/json" },
+			},
+		);
 	} catch (error) {
 		console.error("Erreur API Chat:", error);
 		return new Response(

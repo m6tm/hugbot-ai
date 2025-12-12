@@ -11,7 +11,18 @@ let { session, supabase } = $derived(data);
 onMount(() => {
 	themeStore.init();
 	settingsStore.init();
-	chatStore.init();
+
+	if (data.conversations) {
+		chatStore.init(data.conversations);
+	} else {
+		chatStore.init();
+	}
+
+	$effect(() => {
+		if (data.conversations) {
+			chatStore.setConversations(data.conversations);
+		}
+	});
 
 	const {
 		data: { subscription },
