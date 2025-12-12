@@ -17,7 +17,7 @@ import {
 	incrementGuestMessageCount,
 } from "$lib/infrastructure/services/guestLimit.service";
 import { decrypt } from "$lib/server/crypto";
-import { db } from "$lib/server/db";
+import prisma, { db } from "$lib/server/db";
 import type { RequestHandler } from "./$types";
 
 interface ChatMessage {
@@ -41,20 +41,27 @@ const MAX_CONTEXT_MESSAGES = 20;
 
 /**
  * Sauvegarde un message en BDD sans bloquer l'execution
+ * Met aussi a jour le updatedAt de la conversation via transaction
  */
 function saveMessageAsync(
 	conversationId: string,
 	role: "user" | "assistant",
 	content: string,
 ): void {
-	db.message
-		.create({
-			data: {
-				conversationId,
-				role,
-				content,
-			},
-		})
+	prisma
+		.$transaction([
+			prisma.message.create({
+				data: {
+					conversationId,
+					role,
+					content,
+				},
+			}),
+			prisma.conversation.update({
+				where: { id: conversationId },
+				data: { updatedAt: new Date() },
+			}),
+		])
 		.catch((error) => {
 			console.error(`Erreur sauvegarde message ${role}:`, error);
 		});

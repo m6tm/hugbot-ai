@@ -18,7 +18,7 @@ export const load: LayoutServerLoad = async ({
 				messages: {
 					take: 1,
 					orderBy: { createdAt: "desc" },
-					select: { content: true }, // Preview maybe?
+					select: { content: true },
 				},
 			},
 		});

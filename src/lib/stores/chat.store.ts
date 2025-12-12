@@ -69,6 +69,16 @@ function createChatStore() {
 		return new ChatUseCase(storage, getChatService());
 	}
 
+	/**
+	 * Trie les conversations par date de mise a jour (plus recent en premier)
+	 */
+	function sortConversations(conversations: Conversation[]): Conversation[] {
+		return [...conversations].sort(
+			(a, b) =>
+				new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+		);
+	}
+
 	return {
 		subscribe,
 
@@ -247,15 +257,21 @@ function createChatStore() {
 				if (conversationId === "temp-new") {
 					// We might want to remove the temp one and add a real one once verified, or just update it
 				}
+				const updatedConvs = s.conversations.map((c) =>
+					c.id === conversationId || (conversationId === "temp-new" && !c.id)
+						? {
+								...c,
+								messages: [...c.messages, userMsg],
+								updatedAt: new Date(),
+							}
+						: c,
+				);
+
 				return {
 					...s,
 					isStreaming: true,
 					streamingContent: "",
-					conversations: s.conversations.map((c) =>
-						c.id === conversationId || (conversationId === "temp-new" && !c.id)
-							? { ...c, messages: [...c.messages, userMsg] }
-							: c,
-					),
+					conversations: sortConversations(updatedConvs),
 				};
 			});
 
@@ -324,20 +340,24 @@ function createChatStore() {
 					conversationId: conversationId || "temp-new",
 				};
 
-				update((s) => ({
-					...s,
-					isStreaming: false,
-					streamingContent: "",
-					conversations: s.conversations.map((c) =>
+				update((s) => {
+					const updatedConversations = s.conversations.map((c) =>
 						c.id === conversationId || (!c.id && conversationId === "temp-new")
 							? {
 									...c,
 									messages: [...c.messages, assistantMsg],
 									id: conversationId,
+									updatedAt: new Date(),
 								}
 							: c,
-					),
-				}));
+					);
+					return {
+						...s,
+						isStreaming: false,
+						streamingContent: "",
+						conversations: sortConversations(updatedConversations),
+					};
+				});
 
 				invalidate("app:conversations");
 			} catch (error) {
