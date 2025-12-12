@@ -1,4 +1,5 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { db } from "$lib/server/db";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals: { safeGetSession } }) => {
@@ -18,13 +19,17 @@ export const actions: Actions = {
 			return fail(400, { email, missing: true });
 		}
 
-		const { error } = await supabase.auth.signInWithPassword({
+		const { data, error } = await supabase.auth.signInWithPassword({
 			email,
 			password,
 		});
 
 		if (error) {
 			return fail(400, { email, error: error.message });
+		}
+
+		if (data.user?.email) {
+			await syncUser(data.user.id, data.user.email);
 		}
 
 		redirect(303, "/");
@@ -60,6 +65,10 @@ export const actions: Actions = {
 			return fail(400, { email, error: error.message });
 		}
 
+		if (data.user?.email) {
+			await syncUser(data.user.id, data.user.email);
+		}
+
 		// Si une session est retournee (ex: confirmation email desactivee), on connecte direct
 		if (data.session) {
 			redirect(303, "/");
@@ -77,3 +86,19 @@ export const actions: Actions = {
 		redirect(303, "/");
 	},
 };
+
+async function syncUser(id: string, email: string) {
+	try {
+		const existingUser = await db.user.findUnique({
+			where: { id },
+		});
+		if (!existingUser) {
+			await db.user.create({
+				data: { id, email },
+			});
+		}
+	} catch (error) {
+		console.error("Error syncing user with Prisma:", error);
+		// On ne bloque pas l'auth si la synchro échoue, mais c'est à surveiller
+	}
+}
