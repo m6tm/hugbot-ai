@@ -4,6 +4,7 @@
 
 import { writable } from "svelte/store";
 import { db, isIndexedDBAvailable } from "$lib/infrastructure/database/db";
+import { httpClient } from "$lib/infrastructure/http";
 
 export interface TelegramIntegration {
 	enabled: boolean;
@@ -119,15 +120,11 @@ function createIntegrationsStore() {
 			botToken: string,
 		): Promise<{ ok: boolean; bot?: { username: string }; error?: string }> {
 			try {
-				const response = await fetch("/api/integrations/telegram/test", {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({ botToken }),
-				});
-
-				const data = await response.json();
+				const { data } = await httpClient.post<{
+					ok: boolean;
+					bot?: { username: string };
+					error?: string;
+				}>("/api/integrations/telegram/test", { botToken });
 				return data;
 			} catch (error) {
 				console.error("Erreur lors du test de connexion Telegram:", error);
@@ -144,21 +141,11 @@ function createIntegrationsStore() {
 		): Promise<{ ok: boolean; error?: string }> {
 			try {
 				const message =
-					"🤖 Test de connexion ChatAI - Intégration fonctionnelle !";
-				const response = await fetch("/api/integrations/telegram/send", {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						botToken,
-						chatId,
-						message,
-						parseMode: "Markdown",
-					}),
-				});
-
-				const data = await response.json();
+					"Test de connexion ChatAI - Integration fonctionnelle !";
+				const { data } = await httpClient.post<{ ok: boolean; error?: string }>(
+					"/api/integrations/telegram/send",
+					{ botToken, chatId, message, parseMode: "Markdown" },
+				);
 				return data;
 			} catch (error) {
 				console.error("Erreur lors de l'envoi du message test:", error);

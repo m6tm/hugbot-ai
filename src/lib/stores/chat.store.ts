@@ -11,6 +11,7 @@ import type { ChatServicePort } from "$lib/domain/ports/chat-service.port";
 import { DexieStorageAdapter } from "$lib/infrastructure/adapters/dexie-storage.adapter";
 import { HuggingFaceAdapter } from "$lib/infrastructure/adapters/huggingface.adapter";
 import { MockChatAdapter } from "$lib/infrastructure/adapters/mock-chat.adapter";
+import { HttpClientError, httpClient } from "$lib/infrastructure/http";
 import { settingsStore } from "./settings.store";
 
 interface ChatState {
@@ -155,16 +156,15 @@ function createChatStore() {
 
 		async loadConversationMessages(id: string) {
 			try {
-				const res = await fetch(`/api/conversations/${id}`);
-				if (res.ok) {
-					const fullConv = await res.json();
-					update((state) => ({
-						...state,
-						conversations: state.conversations.map((c) =>
-							c.id === id ? { ...c, messages: fullConv.messages } : c,
-						),
-					}));
-				}
+				const { data: fullConv } = await httpClient.get<{
+					messages: Conversation["messages"];
+				}>(`/api/conversations/${id}`);
+				update((state) => ({
+					...state,
+					conversations: state.conversations.map((c) =>
+						c.id === id ? { ...c, messages: fullConv.messages } : c,
+					),
+				}));
 			} catch (e) {
 				console.error("Failed to load messages", e);
 			}
@@ -196,7 +196,7 @@ function createChatStore() {
 		async deleteConversation(id: string) {
 			try {
 				if (id && id !== "temp-new") {
-					await fetch(`/api/conversations/${id}`, { method: "DELETE" });
+					await httpClient.delete(`/api/conversations/${id}`);
 				}
 
 				update((state) => {
@@ -272,98 +272,89 @@ function createChatStore() {
 						content: m.content,
 					})) || [];
 
-				const res = await fetch("/api/chat", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						messages: [...conversationHistory, { role: "user", content }],
-						modelId: settings.currentModelId,
-						temperature: settings.temperature,
-						maxTokens: settings.maxTokens,
-						stream: true,
-						conversationId:
-							conversationId === "temp-new" ? undefined : conversationId,
-					}),
+				const res = await httpClient.postStream("/api/chat", {
+					messages: [...conversationHistory, { role: "user", content }],
+					modelId: settings.currentModelId,
+					temperature: settings.temperature,
+					maxTokens: settings.maxTokens,
+					stream: true,
+					conversationId:
+						conversationId === "temp-new" ? undefined : conversationId,
 				});
 
-				// RAG Integration - skipping for now to focus on basic db integration,
-				// but normally we'd do retrieval here or on server. API handles basic chat.
-
-				// Handle streaming response
-				if (res.ok) {
-					// Capture new conversation ID if it was created
-					const newId = res.headers.get("X-Conversation-Id");
-					if (newId && (!conversationId || conversationId === "temp-new")) {
-						// Update current conversation ID immediately if it was temp
-						update((s) => ({
-							...s,
-							currentConversationId: newId,
-							conversations: s.conversations.map((c) =>
-								c.id === "temp-new" ? { ...c, id: newId } : c,
-							),
-						}));
-						// Update local variable for checking later
-						conversationId = newId;
-					}
-
-					const reader = res.body?.getReader();
-					if (!reader) return;
-					const decoder = new TextDecoder();
-
-					while (true) {
-						const { done, value } = await reader.read();
-						if (done) break;
-						const chunk = decoder.decode(value);
-						const lines = chunk.split("\n");
-						for (const line of lines) {
-							if (line.startsWith("data: ")) {
-								const dataStr = line.slice(6);
-								if (dataStr === "[DONE]") break;
-								try {
-									const data = JSON.parse(dataStr);
-									if (data.content) {
-										update((s) => ({
-											...s,
-											streamingContent: s.streamingContent + data.content,
-										}));
-									}
-								} catch (_e) {}
-							}
-						}
-					}
-
-					// Finalize
-					const finalContent = get({ subscribe }).streamingContent;
-					const assistantMsg = {
-						role: "assistant" as const,
-						content: finalContent,
-						id: crypto.randomUUID(),
-						createdAt: new Date(),
-						conversationId: conversationId || "temp-new",
-					};
-
+				// Capture new conversation ID if it was created
+				const newId = res.headers.get("X-Conversation-Id");
+				if (newId && (!conversationId || conversationId === "temp-new")) {
 					update((s) => ({
 						...s,
-						isStreaming: false,
-						streamingContent: "",
+						currentConversationId: newId,
 						conversations: s.conversations.map((c) =>
-							c.id === conversationId ||
-							(!c.id && conversationId === "temp-new")
-								? {
-										...c,
-										messages: [...c.messages, assistantMsg],
-										id: conversationId,
-									} // Ensure ID is set
-								: c,
+							c.id === "temp-new" ? { ...c, id: newId } : c,
 						),
 					}));
-
-					invalidate("app:conversations");
+					conversationId = newId;
 				}
+
+				const reader = res.body?.getReader();
+				if (!reader) return;
+				const decoder = new TextDecoder();
+
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) break;
+					const chunk = decoder.decode(value);
+					const lines = chunk.split("\n");
+					for (const line of lines) {
+						if (line.startsWith("data: ")) {
+							const dataStr = line.slice(6);
+							if (dataStr === "[DONE]") break;
+							try {
+								const data = JSON.parse(dataStr);
+								if (data.content) {
+									update((s) => ({
+										...s,
+										streamingContent: s.streamingContent + data.content,
+									}));
+								}
+							} catch (_e) {}
+						}
+					}
+				}
+
+				// Finalize
+				const finalContent = get({ subscribe }).streamingContent;
+				const assistantMsg = {
+					role: "assistant" as const,
+					content: finalContent,
+					id: crypto.randomUUID(),
+					createdAt: new Date(),
+					conversationId: conversationId || "temp-new",
+				};
+
+				update((s) => ({
+					...s,
+					isStreaming: false,
+					streamingContent: "",
+					conversations: s.conversations.map((c) =>
+						c.id === conversationId || (!c.id && conversationId === "temp-new")
+							? {
+									...c,
+									messages: [...c.messages, assistantMsg],
+									id: conversationId,
+								}
+							: c,
+					),
+				}));
+
+				invalidate("app:conversations");
 			} catch (error) {
+				const errorMessage =
+					error instanceof HttpClientError
+						? error.message
+						: (error as Error).message;
 				update((state) => ({
 					...state,
-					error: (error as Error).message,
+					error: errorMessage,
 					isStreaming: false,
 					streamingContent: "",
 				}));
@@ -403,11 +394,8 @@ function createChatStore() {
 
 			// Server update (rewind)
 			if (conversationId !== "temp-new") {
-				await fetch(
+				await httpClient.delete(
 					`/api/conversations/${conversationId}/messages?fromId=${messageId}`,
-					{
-						method: "DELETE",
-					},
 				);
 			}
 
@@ -463,10 +451,8 @@ function createChatStore() {
 		async renameConversation(id: string, newTitle: string) {
 			try {
 				if (id && id !== "temp-new") {
-					await fetch(`/api/conversations/${id}`, {
-						method: "PATCH",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ title: newTitle }),
+					await httpClient.patch(`/api/conversations/${id}`, {
+						title: newTitle,
 					});
 				}
 
@@ -521,19 +507,12 @@ function createChatStore() {
 
 				console.log(`Syncing ${modifiedConversations.length} conversations...`);
 
-				const res = await fetch("/api/sync", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ conversations: modifiedConversations }),
+				await httpClient.post("/api/sync", {
+					conversations: modifiedConversations,
 				});
-
-				if (res.ok) {
-					const now = new Date().toISOString();
-					localStorage.setItem("lastSyncTimestamp", now);
-					console.log("Sync success");
-				} else {
-					console.error("Sync failed", await res.text());
-				}
+				const now = new Date().toISOString();
+				localStorage.setItem("lastSyncTimestamp", now);
+				console.log("Sync success");
 			} catch (error) {
 				console.error("Sync error", error);
 			}
@@ -545,13 +524,8 @@ function createChatStore() {
 		 */
 		async restore() {
 			try {
-				const res = await fetch("/api/sync/restore");
-				if (!res.ok) {
-					console.error("Restore failed", await res.text());
-					return;
-				}
-
-				const serverConversations: Conversation[] = await res.json();
+				const { data: serverConversations } =
+					await httpClient.get<Conversation[]>("/api/sync/restore");
 
 				if (serverConversations.length === 0) {
 					console.log("No conversations to restore");

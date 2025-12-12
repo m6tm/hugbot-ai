@@ -1,4 +1,5 @@
 import { browser } from "$app/environment";
+import { httpClient } from "$lib/infrastructure/http";
 
 /**
  * Service RAG côté client
@@ -38,22 +39,14 @@ export class RAGService {
 	 */
 	async addDocument(text: string): Promise<void> {
 		try {
-			const response = await fetch("/api/rag/add", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
+			const { data: result } = await httpClient.post<{ indexData?: string }>(
+				"/api/rag/add",
+				{
 					text,
 					indexData: this.getStoredIndexData(),
-				}),
-			});
-
-			if (!response.ok) {
-				const error = await response.json();
-				throw new Error(error.error || "Erreur lors de l'ajout");
-			}
-
-			const result = await response.json();
-			this.saveIndexData(result.indexData);
+				},
+			);
+			this.saveIndexData(result.indexData ?? null);
 		} catch (error) {
 			console.error("RAG addDocument failed:", error);
 			throw error;
@@ -67,29 +60,15 @@ export class RAGService {
 		try {
 			const indexData = this.getStoredIndexData();
 
-			// Si pas de données d'index, retourner une chaîne vide
 			if (!indexData) {
 				return "";
 			}
 
-			const response = await fetch("/api/rag/retrieve", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					query,
-					k,
-					indexData,
-				}),
-			});
+			const { data: result } = await httpClient.post<{
+				context?: string;
+				indexData?: string;
+			}>("/api/rag/retrieve", { query, k, indexData });
 
-			if (!response.ok) {
-				const error = await response.json();
-				throw new Error(error.error || "Erreur lors de la récupération");
-			}
-
-			const result = await response.json();
-
-			// Mettre à jour l'index si nécessaire
 			if (result.indexData) {
 				this.saveIndexData(result.indexData);
 			}

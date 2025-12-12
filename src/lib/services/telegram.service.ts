@@ -4,6 +4,7 @@
  */
 
 import { get } from "svelte/store";
+import { httpClient } from "$lib/infrastructure/http";
 import { integrationsStore } from "$lib/stores";
 
 interface TelegramConfig {
@@ -58,20 +59,15 @@ export class TelegramService {
 		}
 
 		try {
-			const response = await fetch("/api/integrations/telegram/send", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
+			const { data } = await httpClient.post<{ ok: boolean }>(
+				"/api/integrations/telegram/send",
+				{
 					botToken: this.config.botToken,
 					chatId: this.config.chatId,
 					message,
 					parseMode,
-				}),
-			});
-
-			const data = await response.json();
+				},
+			);
 			return data.ok;
 		} catch (error) {
 			console.error("Erreur lors de l'envoi de notification Telegram:", error);

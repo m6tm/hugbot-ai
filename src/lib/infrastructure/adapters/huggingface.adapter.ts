@@ -10,6 +10,7 @@ import type {
 	ChatCompletionOptions,
 	ChatServicePort,
 } from "$lib/domain/ports/chat-service.port";
+import { HttpClientError, httpClient } from "$lib/infrastructure/http";
 import { getOrCreateFingerprint } from "$lib/utils/fingerprint";
 
 interface HuggingFaceConfig {
@@ -80,12 +81,8 @@ export class HuggingFaceAdapter implements ChatServicePort {
 			options?.systemInstruction,
 		);
 
-		const response = await fetch("/api/chat", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
+		try {
+			const { data } = await httpClient.post<ApiChatResponse>("/api/chat", {
 				messages: formattedMessages,
 				modelId: this.modelId,
 				temperature: options?.temperature || 0.7,
@@ -93,24 +90,30 @@ export class HuggingFaceAdapter implements ChatServicePort {
 				apiKey: this.apiKey || undefined,
 				stream: false,
 				fingerprint: this.fingerprint || undefined,
-			}),
-		});
+			});
 
-		const data: ApiChatResponse = await response.json();
+			if (data.error) {
+				if (data.error === "GUEST_LIMIT_REACHED") {
+					throw new Error(
+						data.message ||
+							"Limite journaliere atteinte. Connectez-vous pour continuer.",
+					);
+				}
+				throw new Error(data.error);
+			}
 
-		if (!response.ok || data.error) {
-			if (data.error === "GUEST_LIMIT_REACHED") {
+			return data.content || "";
+		} catch (error) {
+			if (
+				error instanceof HttpClientError &&
+				error.code === "GUEST_LIMIT_REACHED"
+			) {
 				throw new Error(
-					data.message ||
-						"Limite journalière atteinte. Connectez-vous pour continuer.",
+					"Limite journaliere atteinte. Connectez-vous pour continuer.",
 				);
 			}
-			throw new Error(
-				data.error || "Erreur lors de la communication avec l'API",
-			);
+			throw error;
 		}
-
-		return data.content || "";
 	}
 
 	async sendMessage(
@@ -133,34 +136,15 @@ export class HuggingFaceAdapter implements ChatServicePort {
 			options?.systemInstruction,
 		);
 
-		const response = await fetch("/api/chat", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				messages: formattedMessages,
-				modelId: this.modelId,
-				temperature: options?.temperature || 0.7,
-				maxTokens: options?.maxTokens || 1024,
-				apiKey: this.apiKey || undefined,
-				stream: true,
-				fingerprint: this.fingerprint || undefined,
-			}),
+		const response = await httpClient.postStream("/api/chat", {
+			messages: formattedMessages,
+			modelId: this.modelId,
+			temperature: options?.temperature || 0.7,
+			maxTokens: options?.maxTokens || 1024,
+			apiKey: this.apiKey || undefined,
+			stream: true,
+			fingerprint: this.fingerprint || undefined,
 		});
-
-		if (!response.ok) {
-			const errorData: ApiChatResponse = await response.json();
-			if (errorData.error === "GUEST_LIMIT_REACHED") {
-				throw new Error(
-					errorData.message ||
-						"Limite journalière atteinte. Connectez-vous pour continuer.",
-				);
-			}
-			throw new Error(
-				errorData.error || "Erreur lors de la communication avec l'API",
-			);
-		}
 
 		const reader = response.body?.getReader();
 		if (!reader) {
@@ -206,20 +190,14 @@ export class HuggingFaceAdapter implements ChatServicePort {
 
 	async isAvailable(): Promise<boolean> {
 		try {
-			const response = await fetch("/api/chat", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					messages: [{ role: "user", content: "test" }],
-					modelId: this.modelId,
-					maxTokens: 1,
-					apiKey: this.apiKey || undefined,
-					fingerprint: this.fingerprint || undefined,
-				}),
+			await httpClient.post("/api/chat", {
+				messages: [{ role: "user", content: "test" }],
+				modelId: this.modelId,
+				maxTokens: 1,
+				apiKey: this.apiKey || undefined,
+				fingerprint: this.fingerprint || undefined,
 			});
-			return response.ok;
+			return true;
 		} catch {
 			return false;
 		}
