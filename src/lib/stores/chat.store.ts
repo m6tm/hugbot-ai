@@ -260,26 +260,19 @@ function createChatStore() {
 			});
 
 			const settings = get(settingsStore);
+			const model = getModelById(settings.currentModelId);
 
 			try {
-				// Recuperer l'historique de la conversation pour le contexte
-				const currentConv = state.conversations.find(
-					(c) => c.id === conversationId,
-				);
-				const conversationHistory =
-					currentConv?.messages.map((m) => ({
-						role: m.role,
-						content: m.content,
-					})) || [];
-
+				// L'historique est maintenant charge cote serveur depuis la BDD
 				const res = await httpClient.postStream("/api/chat", {
-					messages: [...conversationHistory, { role: "user", content }],
-					modelId: settings.currentModelId,
+					message: content,
+					modelId: model?.modelId || settings.currentModelId,
 					temperature: settings.temperature,
 					maxTokens: settings.maxTokens,
 					stream: true,
 					conversationId:
 						conversationId === "temp-new" ? undefined : conversationId,
+					systemInstruction: settings.systemInstruction || undefined,
 				});
 
 				// Capture new conversation ID if it was created

@@ -2,10 +2,16 @@
  * Route API pour le chat avec Hugging Face
  * Supporte le streaming avec Server-Sent Events (SSE)
  * Inclut la gestion des limites pour les utilisateurs non connectés
+ *
+ * Optimisations :
+ * - Sauvegarde non-bloquante en BDD (fire-and-forget)
+ * - Historique charge depuis la BDD (pas dans le body de la requete)
+ * - Fenetre coulissante pour limiter le contexte envoye a l'IA
  */
 
 import { OpenAI } from "openai";
 import { env } from "$env/dynamic/private";
+import { DEFAULT_SYSTEM_INSTRUCTION } from "$lib/config/default-system-prompt";
 import {
 	canGuestSendMessage,
 	incrementGuestMessageCount,
@@ -20,7 +26,7 @@ interface ChatMessage {
 }
 
 interface ChatRequest {
-	messages: ChatMessage[];
+	message: string;
 	modelId: string;
 	temperature?: number;
 	maxTokens?: number;
@@ -28,10 +34,72 @@ interface ChatRequest {
 	stream?: boolean;
 	fingerprint?: string;
 	conversationId?: string;
+	systemInstruction?: string;
+}
+
+const MAX_CONTEXT_MESSAGES = 20;
+
+/**
+ * Sauvegarde un message en BDD sans bloquer l'execution
+ */
+function saveMessageAsync(
+	conversationId: string,
+	role: "user" | "assistant",
+	content: string,
+): void {
+	db.message
+		.create({
+			data: {
+				conversationId,
+				role,
+				content,
+			},
+		})
+		.catch((error) => {
+			console.error(`Erreur sauvegarde message ${role}:`, error);
+		});
 }
 
 /**
- * Extrait l'adresse IP du client depuis les headers de la requête
+ * Cree une nouvelle conversation en BDD
+ */
+async function createConversation(
+	userId: string,
+	title: string,
+): Promise<string> {
+	const conv = await db.conversation.create({
+		data: {
+			userId,
+			title: title.slice(0, 50),
+		},
+	});
+	return conv.id;
+}
+
+/**
+ * Charge l'historique des messages depuis la BDD avec une limite
+ */
+async function loadConversationHistory(
+	conversationId: string,
+): Promise<ChatMessage[]> {
+	const messages = await db.message.findMany({
+		where: { conversationId },
+		orderBy: { createdAt: "desc" },
+		take: MAX_CONTEXT_MESSAGES,
+		select: {
+			role: true,
+			content: true,
+		},
+	});
+
+	return messages.reverse().map((m) => ({
+		role: m.role as "user" | "assistant",
+		content: m.content,
+	}));
+}
+
+/**
+ * Extrait l'adresse IP du client depuis les headers de la requete
  */
 function getClientIp(request: Request): string {
 	const forwardedFor = request.headers.get("x-forwarded-for");
@@ -48,7 +116,7 @@ function getClientIp(request: Request): string {
 }
 
 /**
- * Génère un identifiant unique combinant IP et fingerprint
+ * Genere un identifiant unique combinant IP et fingerprint
  */
 function generateGuestId(ip: string, fingerprint?: string): string {
 	if (fingerprint) {
@@ -82,23 +150,31 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				);
 			}
 
-			await incrementGuestMessageCount(guestId);
+			// Increment en arriere-plan
+			incrementGuestMessageCount(guestId).catch(console.error);
 		}
 
 		const {
-			messages,
+			message,
 			modelId,
 			temperature = 0.7,
 			maxTokens = 1024,
 			apiKey,
 			stream = false,
 			conversationId,
+			systemInstruction,
 		} = body;
 
-		// Utilise la cle de l'utilisateur si fournie, sinon celle en BDD ou celle du serveur
+		if (!message?.trim()) {
+			return new Response(JSON.stringify({ error: "Message vide" }), {
+				status: 400,
+				headers: { "Content-Type": "application/json" },
+			});
+		}
+
+		// Recuperation de la cle API
 		let effectiveApiKey = apiKey;
 
-		// Si connecte, recuperer la cle chiffrée ou utiliser la clé fournie
 		if (user && !effectiveApiKey) {
 			const userData = await db.user.findUnique({
 				where: { id: user.id },
@@ -114,7 +190,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			}
 		}
 
-		// Fallback serveur
 		if (!effectiveApiKey) {
 			effectiveApiKey = env.HUGGINGFACE_API_KEY;
 		}
@@ -132,50 +207,59 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			);
 		}
 
-		// Gestion de la persistence (seulement si connecte)
+		// Gestion de la conversation (seulement si connecte)
 		let currentConversationId = conversationId;
+		let conversationHistory: ChatMessage[] = [];
+
 		if (session && user) {
 			if (!currentConversationId) {
-				// Nouvelle conversation
-				const title =
-					messages[0]?.content.slice(0, 50) || "Nouvelle conversation";
-				const conv = await db.conversation.create({
-					data: {
-						userId: user.id,
-						title: title,
-					},
-				});
-				currentConversationId = conv.id;
+				// Nouvelle conversation - creation synchrone car on a besoin de l'ID
+				currentConversationId = await createConversation(user.id, message);
+			} else {
+				// Charger l'historique depuis la BDD
+				conversationHistory = await loadConversationHistory(
+					currentConversationId,
+				);
 			}
 
-			// Sauvegarder le message utilisateur
-			const lastMessage = messages[messages.length - 1];
-			if (lastMessage && lastMessage.role === "user" && currentConversationId) {
-				await db.message.create({
-					data: {
-						conversationId: currentConversationId,
-						role: "user",
-						content: lastMessage.content,
-					},
-				});
-			}
+			// Sauvegarder le message utilisateur en arriere-plan
+			saveMessageAsync(currentConversationId, "user", message);
 		}
+
+		// Construction du contexte pour l'IA
+		const messagesForAI: ChatMessage[] = [];
+
+		// Toujours ajouter le prompt systeme par defaut
+		// Combine avec l'instruction personnalisee si presente
+		let finalSystemContent = DEFAULT_SYSTEM_INSTRUCTION;
+		if (systemInstruction?.trim()) {
+			finalSystemContent += `\n\n${systemInstruction}`;
+		}
+
+		messagesForAI.push({
+			role: "system",
+			content: finalSystemContent,
+		});
+
+		// Ajout de l'historique (deja limite par loadConversationHistory)
+		messagesForAI.push(...conversationHistory);
+
+		// Ajout du nouveau message
+		messagesForAI.push({
+			role: "user",
+			content: message,
+		});
 
 		const client = new OpenAI({
 			baseURL: "https://router.huggingface.co/v1",
 			apiKey: effectiveApiKey,
 		});
 
-		const formattedMessages = messages.map((m) => ({
-			role: m.role,
-			content: m.content,
-		}));
-
 		// Mode streaming avec SSE
 		if (stream) {
 			const streamResponse = await client.chat.completions.create({
 				model: modelId,
-				messages: formattedMessages,
+				messages: messagesForAI,
 				max_tokens: maxTokens,
 				temperature: temperature,
 				stream: true,
@@ -191,29 +275,25 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 							const content = chunk.choices[0]?.delta?.content;
 							if (content) {
 								accumulatedContent += content;
-								// Format SSE
 								const data = `data: ${JSON.stringify({ content })}\n\n`;
 								controller.enqueue(encoder.encode(data));
 							}
 						}
 
-						// Sauvegarde de la reponse assistant si connecte
+						// Sauvegarde non-bloquante de la reponse
 						if (
 							session &&
 							user &&
 							currentConversationId &&
 							accumulatedContent
 						) {
-							await db.message.create({
-								data: {
-									conversationId: currentConversationId,
-									role: "assistant",
-									content: accumulatedContent,
-								},
-							});
+							saveMessageAsync(
+								currentConversationId,
+								"assistant",
+								accumulatedContent,
+							);
 						}
 
-						// Signal de fin
 						controller.enqueue(encoder.encode("data: [DONE]\n\n"));
 						controller.close();
 					} catch (error) {
@@ -231,7 +311,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					"Content-Type": "text/event-stream",
 					"Cache-Control": "no-cache",
 					Connection: "keep-alive",
-					// Send conversation ID in header for client to update URL if needed
 					"X-Conversation-Id": currentConversationId || "",
 				},
 			});
@@ -240,7 +319,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		// Mode non-streaming
 		const chatCompletion = await client.chat.completions.create({
 			model: modelId,
-			messages: formattedMessages,
+			messages: messagesForAI,
 			max_tokens: maxTokens,
 			temperature: temperature,
 		});
@@ -254,15 +333,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			});
 		}
 
-		// Sauvegarder reponse en non-streaming
+		// Sauvegarde non-bloquante
 		if (session && user && currentConversationId) {
-			await db.message.create({
-				data: {
-					conversationId: currentConversationId,
-					role: "assistant",
-					content: content,
-				},
-			});
+			saveMessageAsync(currentConversationId, "assistant", content);
 		}
 
 		return new Response(

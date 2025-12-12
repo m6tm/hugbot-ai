@@ -84,8 +84,9 @@ async function copyToClipboard() {
 	}
 }
 
-function formatTime(date: Date): string {
-	return date.toLocaleTimeString("fr-FR", {
+function formatTime(date: Date | string): string {
+	const dateObj = typeof date === "string" ? new Date(date) : date;
+	return dateObj.toLocaleTimeString("fr-FR", {
 		hour: "2-digit",
 		minute: "2-digit",
 	});
