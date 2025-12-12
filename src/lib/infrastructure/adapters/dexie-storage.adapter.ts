@@ -85,6 +85,17 @@ export class DexieStorageAdapter implements StoragePort {
 		return records.map((r) => this.fromRecord(r));
 	}
 
+	async getConversationsModifiedSince(date: Date): Promise<Conversation[]> {
+		if (!isIndexedDBAvailable()) return [];
+
+		const records = await db.conversations
+			.where("updatedAt")
+			.above(date)
+			.toArray();
+
+		return records.map((r) => this.fromRecord(r));
+	}
+
 	async deleteConversation(id: string): Promise<void> {
 		if (!isIndexedDBAvailable()) return;
 

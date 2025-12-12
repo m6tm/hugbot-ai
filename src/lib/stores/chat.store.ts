@@ -423,6 +423,48 @@ function createChatStore() {
 		},
 
 		/**
+		 * Regenere le dernier message de l'assistant
+		 */
+		async regenerateMessage(messageId: string) {
+			const state = get({ subscribe });
+			const conversationId = state.currentConversationId;
+			if (!conversationId) return;
+
+			const conversation = state.conversations.find(
+				(c) => c.id === conversationId,
+			);
+			if (!conversation) return;
+
+			const messageIndex = conversation.messages.findIndex(
+				(m) => m.id === messageId,
+			);
+
+			if (messageIndex === -1) return;
+
+			// Identifions le message utilisateur precedent
+			// Si on regenere un message assistant, on doit reenoyer le message user d'avant.
+			// MAIS: le endpoint sendMessage prend "content" et ajoute un message user.
+			// DONC, on doit:
+			// 1. Supprimer le message assistant (messageId)
+			// 2. Trouver le contenu du message user precedent
+			// 3. Supprimer AUSSI le message user precedent (pour que sendMessage le recree) sinon on aura un doublon?
+			// OU BIEN, on cree une methode API qui ne cree pas de message user mais complete juste.
+			//
+			// SIMPLIFICATION: On fait comme editMessage.
+			// On supprime TOUT a partir du message user precedent, et on le "renvoie".
+
+			// Si le message cible est assistant:
+			const targetMessage = conversation.messages[messageIndex];
+			if (targetMessage.role !== "assistant") return; // On regenere generalement l'assistant
+
+			const previousMessage = conversation.messages[messageIndex - 1];
+			if (!previousMessage || previousMessage.role !== "user") return;
+
+			// On utilise editMessage sur le message PRECEDENT avec son PROPRE contenu.
+			await this.editMessage(previousMessage.id, previousMessage.content);
+		},
+
+		/**
 		 * Renomme une conversation
 		 */
 		async renameConversation(id: string, newTitle: string) {
@@ -461,6 +503,47 @@ function createChatStore() {
 		 */
 		reset() {
 			set(initialState);
+		},
+
+		/**
+		 * Synchronise les conversations locales avec le serveur
+		 */
+		async sync() {
+			try {
+				if (typeof localStorage === "undefined") return;
+
+				const lastSyncStr = localStorage.getItem("lastSyncTimestamp");
+				const lastSyncDate = lastSyncStr ? new Date(lastSyncStr) : new Date(0);
+
+				// Requete via l'adapter
+				// Note: On doit caster storage car l'interface n'a pas forcement tout si on l'a pas mise a jour partout
+				// mais ici on sait que c'est DexieStorageAdapter
+				const modifiedConversations =
+					await storage.getConversationsModifiedSince(lastSyncDate);
+
+				if (modifiedConversations.length === 0) {
+					console.log("No conversations to sync");
+					return;
+				}
+
+				console.log(`Syncing ${modifiedConversations.length} conversations...`);
+
+				const res = await fetch("/api/sync", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ conversations: modifiedConversations }),
+				});
+
+				if (res.ok) {
+					const now = new Date().toISOString();
+					localStorage.setItem("lastSyncTimestamp", now);
+					console.log("Sync success");
+				} else {
+					console.error("Sync failed", await res.text());
+				}
+			} catch (error) {
+				console.error("Sync error", error);
+			}
 		},
 	};
 }

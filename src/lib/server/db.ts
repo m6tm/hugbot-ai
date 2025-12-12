@@ -33,6 +33,10 @@ export const db = {
 			prisma.message.createMany(args),
 		findMany: (args: Prisma.MessageFindManyArgs) =>
 			prisma.message.findMany(args),
+		findUnique: (args: Prisma.MessageFindUniqueArgs) =>
+			prisma.message.findUnique(args),
+		deleteMany: (args: Prisma.MessageDeleteManyArgs) =>
+			prisma.message.deleteMany(args),
 	},
 };
 

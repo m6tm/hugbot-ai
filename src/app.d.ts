@@ -1,3 +1,4 @@
+import type { Conversation } from "$lib/domain/entities/conversation";
 import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
 
 declare global {
@@ -14,6 +15,7 @@ declare global {
 		}
 		interface PageData {
 			session: Session | null;
+			conversations?: Conversation[];
 		}
 		// interface PageState {}
 		// interface Platform {}

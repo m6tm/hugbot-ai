@@ -21,6 +21,11 @@ export interface StoragePort {
 	getAllConversations(): Promise<Conversation[]>;
 
 	/**
+	 * Recupere les conversations modifiees depuis une date
+	 */
+	getConversationsModifiedSince(date: Date): Promise<Conversation[]>;
+
+	/**
 	 * Supprime une conversation
 	 */
 	deleteConversation(id: string): Promise<void>;

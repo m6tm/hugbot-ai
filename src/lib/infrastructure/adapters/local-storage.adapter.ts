@@ -81,4 +81,10 @@ export class LocalStorageAdapter implements StoragePort {
 			updatedAt: new Date(),
 		});
 	}
+
+	async getConversationsModifiedSince(date: Date): Promise<Conversation[]> {
+		const data = this.getStoredData();
+		const conversations = Array.from(data.values());
+		return conversations.filter((c) => c.updatedAt > date);
+	}
 }
