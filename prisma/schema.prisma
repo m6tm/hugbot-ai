@@ -56,3 +56,15 @@ model GuestLimit {
 
     @@map("guest_limits")
 }
+
+model InngestError {
+    id         String   @id @default(uuid())
+    eventId    String?
+    functionId String
+    error      String
+    stack      String?
+    context    Json?
+    createdAt  DateTime @default(now())
+
+    @@map("inngest_errors")
+}
