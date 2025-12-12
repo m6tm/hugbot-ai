@@ -137,23 +137,10 @@ function createChatStore() {
 			};
 
 			try {
-				//const chatUseCase = createUseCase();
-				//const conversation = await chatUseCase.createNewConversation();
-				update((state) => ({
-					...state,
-					conversations: [newConv, ...state.conversations], // Ajout en haut
-					currentConversationId: null, // Pas d'ID reel encore
-					// Wait, logic needs currentConversationId to be set for the UI to show the chat area
-				}));
-
-				// Hack: use a temp ID for UI, but handle it cleanly in sendMessage
-				// For now let's just use what we have but be aware sendMessage needs to handle creation
-
-				// Revert to simple local creation for store state
 				update((state) => ({
 					...state,
 					conversations: [newConv, ...state.conversations],
-					currentConversationId: newConv.id || "temp-new", // Fallback
+					currentConversationId: newConv.id,
 				}));
 
 				return newConv;
@@ -208,10 +195,9 @@ function createChatStore() {
 		 */
 		async deleteConversation(id: string) {
 			try {
-				//const chatUseCase = createUseCase();
-				//await chatUseCase.deleteConversation(id);
-				// Call API
-				// await fetch(`/api/conversations/${id}`, { method: 'DELETE' }); // Need to implement this too eventually
+				if (id && id !== "temp-new") {
+					await fetch(`/api/conversations/${id}`, { method: "DELETE" });
+				}
 
 				update((state) => {
 					const newConversations = state.conversations.filter(
@@ -276,15 +262,22 @@ function createChatStore() {
 			const settings = get(settingsStore);
 
 			try {
-				// Call our API
+				// Recuperer l'historique de la conversation pour le contexte
+				const currentConv = state.conversations.find(
+					(c) => c.id === conversationId,
+				);
+				const conversationHistory =
+					currentConv?.messages.map((m) => ({
+						role: m.role,
+						content: m.content,
+					})) || [];
+
 				const res = await fetch("/api/chat", {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
-						messages: [{ role: "user", content }], // Should send history? +server.ts looks at body.messages.
-						// Ideally we send history context.
-						// Let's grab last N messages from store
-						modelId: settings.currentModelId, // Need to make sure we send this
+						messages: [...conversationHistory, { role: "user", content }],
+						modelId: settings.currentModelId,
 						temperature: settings.temperature,
 						maxTokens: settings.maxTokens,
 						stream: true,
