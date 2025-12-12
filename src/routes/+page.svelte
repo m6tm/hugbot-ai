@@ -9,9 +9,12 @@ import { chatStore } from "$lib/stores/chat.store";
 
 let { data } = $props();
 
-onMount(() => {
+onMount(async () => {
 	if (data.session?.user) {
-		chatStore.sync();
+		// D'abord restaurer les conversations du serveur vers local
+		await chatStore.restore();
+		// Puis synchroniser les modifications locales vers le serveur
+		await chatStore.sync();
 	}
 });
 </script>

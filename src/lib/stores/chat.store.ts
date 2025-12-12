@@ -545,6 +545,58 @@ function createChatStore() {
 				console.error("Sync error", error);
 			}
 		},
+
+		/**
+		 * Restaure les conversations du serveur vers la base locale
+		 * Fusionne intelligemment avec les donnees locales existantes
+		 */
+		async restore() {
+			try {
+				const res = await fetch("/api/sync/restore");
+				if (!res.ok) {
+					console.error("Restore failed", await res.text());
+					return;
+				}
+
+				const serverConversations: Conversation[] = await res.json();
+
+				if (serverConversations.length === 0) {
+					console.log("No conversations to restore");
+					return;
+				}
+
+				console.log(`Restoring ${serverConversations.length} conversations...`);
+
+				// Pour chaque conversation du serveur, verifier si elle existe localement
+				for (const serverConv of serverConversations) {
+					const localConv = await storage.getConversation(serverConv.id);
+
+					if (!localConv) {
+						// La conversation n'existe pas localement, on la sauvegarde
+						await storage.saveConversation(serverConv);
+					} else {
+						// La conversation existe, on garde la plus recente
+						const serverDate = new Date(serverConv.updatedAt);
+						const localDate = new Date(localConv.updatedAt);
+
+						if (serverDate > localDate) {
+							await storage.saveConversation(serverConv);
+						}
+					}
+				}
+
+				// Recharger les conversations depuis Dexie
+				const allConversations = await storage.getAllConversations();
+				update((state) => ({
+					...state,
+					conversations: allConversations,
+				}));
+
+				console.log("Restore success");
+			} catch (error) {
+				console.error("Restore error", error);
+			}
+		},
 	};
 }
 
