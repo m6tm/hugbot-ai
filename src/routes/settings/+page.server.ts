@@ -1,79 +1,126 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { encrypt } from "$lib/server/crypto";
+import { decrypt, encrypt } from "$lib/server/crypto";
 import { db } from "$lib/server/db";
 import type { Actions, PageServerLoad } from "./$types";
 
-/**
- * Charge les données pour la page de paramètres.
- * Vérifie si l'utilisateur est authentifié avant d'autoriser l'accès.
- * Redirige vers la page d'authentification si aucune session n'est trouvée.
- *
- * @param {Object} context - Le contexte de chargement de SvelteKit.
- * @param {App.Locals} context.locals - Les variables locales contenant la session.
- * @returns {Promise<void>} Renvoie un objet vide si l'utilisateur est authentifié.
- * @throws {Redirect} Redirige vers '/auth' si l'utilisateur n'est pas connecté.
- */
 export const load: PageServerLoad = async ({ locals }) => {
 	const { session, user } = await locals.safeGetSession();
 
-	if (!session) {
+	if (!session || !user) {
 		throw redirect(303, "/");
 	}
 
-	// Retrieve existing key if present (don't send full key back to client usually, maybe just a placeholder)
-	const userData = await db.user.findUnique({
-		where: { id: user?.id },
-		select: { huggingFaceKey: true },
+	// Fetch or create settings for the user
+	let setting = await db.setting.findUnique({
+		where: { userId: user.id },
 	});
 
+	if (!setting) {
+		setting = await db.setting.create({
+			data: {
+				userId: user.id,
+				// Check if old user key exists and migrate it?
+				// For simplicity, we start fresh or user re-enters.
+				// Actually, helpful to migrate if exists.
+			},
+		});
+	}
+
+	// Decrypt keys for client usage (be careful here, but user needs to see/edit them?)
+	// Usually we send back placeholders if we don't want to expose, but for a settings page
+	// where they can edit, often we send it back or empty if they want to change.
+	// The current UI binds `apiKey`.
+	let decryptedApiKey = "";
+	if (setting.apiKey) {
+		try {
+			decryptedApiKey = decrypt(setting.apiKey);
+		} catch (_e) {
+			// If decryption fails (maybe it wasn't encrypted legacy data), return raw or empty
+			decryptedApiKey = setting.apiKey;
+		}
+	}
+
+	let decryptedTelegramToken = "";
+	if (setting.telegramBotToken) {
+		try {
+			decryptedTelegramToken = decrypt(setting.telegramBotToken);
+		} catch (_e) {
+			decryptedTelegramToken = setting.telegramBotToken || "";
+		}
+	}
+
 	return {
-		hasKey: !!userData?.huggingFaceKey,
+		settings: {
+			...setting,
+			apiKey: decryptedApiKey,
+			telegramBotToken: decryptedTelegramToken,
+		},
 	};
 };
 
 export const actions: Actions = {
-	saveKey: async ({ request, locals }) => {
+	saveSettings: async ({ request, locals }) => {
 		const { session, user } = await locals.safeGetSession();
-		if (!session) {
+		if (!session || !user) {
 			return fail(401, { message: "Unauthorized" });
 		}
 
 		const formData = await request.formData();
-		const apiKey = formData.get("apiKey") as string;
+		const section = formData.get("section") as string;
 
-		if (!apiKey) {
-			return fail(400, { message: "API Key is required" });
+		const updateData: Record<
+			string,
+			string | number | boolean | null | undefined
+		> = {};
+
+		if (section === "appearance") {
+			updateData.codeTheme = formData.get("codeTheme") as string;
+		} else if (section === "ai") {
+			const apiKey = formData.get("apiKey") as string;
+			const temperature = parseFloat(formData.get("temperature") as string);
+			const maxTokens = parseInt(formData.get("maxTokens") as string, 10);
+
+			if (apiKey) {
+				updateData.apiKey = encrypt(apiKey);
+			}
+			updateData.temperature = temperature;
+			updateData.maxTokens = maxTokens;
+		} else if (section === "system") {
+			updateData.systemInstruction = formData.get(
+				"systemInstruction",
+			) as string;
+		} else if (section === "integrations") {
+			const telegramEnabled = formData.get("telegramEnabled") === "true";
+			const telegramBotToken = formData.get("telegramBotToken") as string;
+			const telegramChatId = formData.get("telegramChatId") as string;
+			const telegramSendOnNewMessage =
+				formData.get("telegramSendOnNewMessage") === "true";
+			const telegramSendOnError =
+				formData.get("telegramSendOnError") === "true";
+
+			updateData.telegramEnabled = telegramEnabled;
+			if (telegramBotToken) {
+				updateData.telegramBotToken = encrypt(telegramBotToken);
+			}
+			updateData.telegramChatId = telegramChatId;
+			updateData.telegramSendOnNewMessage = telegramSendOnNewMessage;
+			updateData.telegramSendOnError = telegramSendOnError;
 		}
 
 		try {
-			const encryptedKey = encrypt(apiKey);
-			await db.user.update({
-				where: { id: user?.id },
-				data: { huggingFaceKey: encryptedKey },
+			await db.setting.upsert({
+				where: { userId: user.id },
+				create: {
+					userId: user.id,
+					...updateData,
+				},
+				update: updateData,
 			});
 
-			return { success: true };
+			return { success: true, section };
 		} catch (error) {
-			console.error("Error saving key:", error);
-			return fail(500, { message: "Failed to save key" });
-		}
-	},
-
-	deleteKey: async ({ locals }) => {
-		const { session, user } = await locals.safeGetSession();
-		if (!session) {
-			return fail(401, { message: "Unauthorized" });
-		}
-
-		try {
-			await db.user.update({
-				where: { id: user?.id },
-				data: { huggingFaceKey: null },
-			});
-			return { success: true };
-		} catch (error) {
-			console.error("Error removing key:", error);
-			return fail(500, { message: "Failed to remove key" });
+			console.error("Error saving settings:", error);
+			return fail(500, { message: "Failed to save settings" });
 		}
 	},
 };

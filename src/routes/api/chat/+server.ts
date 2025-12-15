@@ -183,14 +183,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		let effectiveApiKey = apiKey;
 
 		if (user && !effectiveApiKey) {
-			const userData = await db.user.findUnique({
-				where: { id: user.id },
-				select: { huggingFaceKey: true },
+			const setting = await db.setting.findUnique({
+				where: { userId: user.id },
+				select: { apiKey: true },
 			});
 
-			if (userData?.huggingFaceKey) {
+			if (setting?.apiKey) {
 				try {
-					effectiveApiKey = decrypt(userData.huggingFaceKey);
+					effectiveApiKey = decrypt(setting.apiKey);
 				} catch (e) {
 					console.error("Failed to decrypt user key", e);
 				}

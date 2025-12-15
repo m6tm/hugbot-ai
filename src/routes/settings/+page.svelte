@@ -18,19 +18,21 @@ import {
 } from "lucide-svelte";
 import { onMount } from "svelte";
 import { slide } from "svelte/transition";
+import { enhance } from "$app/forms";
 import { goto } from "$app/navigation";
 import { RAGService } from "$lib/ai/rag";
 import { integrationsStore, settingsStore, themeStore } from "$lib/stores";
 
+let { data } = $props();
+
+// Local state for form inputs
 let apiKey = $state("");
 let temperature = $state(0.7);
 let maxTokens = $state(1024);
 let codeTheme = $state("tokyo-night");
 let systemInstruction = $state("");
-let isSaved = $state(false);
-let isTelegramSaved = $state(false);
 
-// Variables pour les intégrations
+// Telegram Integration Locals
 let telegramEnabled = $state(false);
 let telegramBotToken = $state("");
 let telegramChatId = $state("");
@@ -39,67 +41,166 @@ let telegramSendOnError = $state(true);
 let telegramTestStatus = $state<"idle" | "testing" | "success" | "error">(
 	"idle",
 );
+let telegramErrorMessage = $state("");
 
-// Variables Knowledge Base
+// Knowledge Base Locals
 let kbText = $state("");
 let isIndexing = $state(false);
 let kbSuccess = $state(false);
 
-onMount(async () => {
-	// Initialiser et charger les valeurs actuelles
-	await integrationsStore.init();
+// Help toggle
+let isHelpCollapsed = $state(true);
 
+// Server State to track dirty status
+let serverState = $state({
+	apiKey: "",
+	temperature: 0.7,
+	maxTokens: 1024,
+	codeTheme: "tokyo-night",
+	systemInstruction: "",
+	telegramEnabled: false,
+	telegramBotToken: "",
+	telegramChatId: "",
+	telegramSendOnNewMessage: true,
+	telegramSendOnError: true,
+});
+
+onMount(async () => {
+	// 1. Initialize Stores from Dexie
+	await integrationsStore.init();
+	await settingsStore.init();
+
+	// 2. Set Local State from Stores (Dexie)
 	apiKey = $settingsStore.apiKey;
 	temperature = $settingsStore.temperature;
 	maxTokens = $settingsStore.maxTokens;
 	codeTheme = $settingsStore.codeTheme;
 	systemInstruction = $settingsStore.systemInstruction;
 
-	// Charger les intégrations
 	const integrations = $integrationsStore;
 	telegramEnabled = integrations.telegram.enabled;
 	telegramBotToken = integrations.telegram.botToken;
 	telegramChatId = integrations.telegram.chatId;
 	telegramSendOnNewMessage = integrations.telegram.sendOnNewMessage;
 	telegramSendOnError = integrations.telegram.sendOnError;
+
+	// 3. Set Server State reference from Props of correct data
+	if (data.settings) {
+		serverState = {
+			apiKey: data.settings.apiKey || "",
+			// Use server data if valid, else default.
+			// Note: If server has 0.7 and dexie has 0.8, isDirty should be true.
+			temperature: data.settings.temperature ?? 0.7,
+			maxTokens: data.settings.maxTokens ?? 1024,
+			codeTheme: data.settings.codeTheme || "tokyo-night",
+			systemInstruction: data.settings.systemInstruction || "",
+			telegramEnabled: data.settings.telegramEnabled ?? false,
+			telegramBotToken: data.settings.telegramBotToken || "",
+			telegramChatId: data.settings.telegramChatId || "",
+			telegramSendOnNewMessage: data.settings.telegramSendOnNewMessage ?? true,
+			telegramSendOnError: data.settings.telegramSendOnError ?? true,
+		};
+	}
 });
 
-function handleSave() {
-	settingsStore.setApiKey(apiKey);
-	settingsStore.setTemperature(temperature);
-	settingsStore.setMaxTokens(maxTokens);
-	settingsStore.setCodeTheme(codeTheme);
-	settingsStore.setSystemInstruction(systemInstruction);
-
-	isSaved = true;
-	setTimeout(() => {
-		isSaved = false;
-	}, 3000);
+function isDirty(section: string) {
+	if (section === "appearance") {
+		return codeTheme !== serverState.codeTheme; // Theme light/dark is local only via themeStore typically? Or we added it? codeTheme is in DB.
+	}
+	if (section === "ai") {
+		return (
+			apiKey !== serverState.apiKey ||
+			temperature !== serverState.temperature ||
+			maxTokens !== serverState.maxTokens
+		);
+	}
+	if (section === "system") {
+		return systemInstruction !== serverState.systemInstruction;
+	}
+	if (section === "integrations") {
+		return (
+			telegramEnabled !== serverState.telegramEnabled ||
+			telegramBotToken !== serverState.telegramBotToken ||
+			telegramChatId !== serverState.telegramChatId ||
+			telegramSendOnNewMessage !== serverState.telegramSendOnNewMessage ||
+			telegramSendOnError !== serverState.telegramSendOnError
+		);
+	}
+	return false;
 }
+
+import type { ActionResult } from "@sveltejs/kit";
+
+const handleSubmit = ({ formData }: { formData: FormData }) => {
+	const section = formData.get("section") as string;
+
+	// Populate FormData manually since inputs might lack name attributes
+	if (section === "appearance") {
+		formData.set("codeTheme", codeTheme);
+		settingsStore.setCodeTheme(codeTheme);
+	} else if (section === "ai") {
+		formData.set("apiKey", apiKey);
+		formData.set("temperature", temperature.toString());
+		formData.set("maxTokens", maxTokens.toString());
+		settingsStore.setApiKey(apiKey);
+		settingsStore.setTemperature(temperature);
+		settingsStore.setMaxTokens(maxTokens);
+	} else if (section === "system") {
+		formData.set("systemInstruction", systemInstruction);
+		settingsStore.setSystemInstruction(systemInstruction);
+	} else if (section === "integrations") {
+		formData.set("telegramEnabled", String(telegramEnabled));
+		formData.set("telegramBotToken", telegramBotToken);
+		formData.set("telegramChatId", telegramChatId);
+		formData.set("telegramSendOnNewMessage", String(telegramSendOnNewMessage));
+		formData.set("telegramSendOnError", String(telegramSendOnError));
+
+		integrationsStore.setTelegramConfig({
+			enabled: telegramEnabled,
+			botToken: telegramBotToken,
+			chatId: telegramChatId,
+			sendOnNewMessage: telegramSendOnNewMessage,
+			sendOnError: telegramSendOnError,
+		});
+		integrationsStore.toggleTelegram(telegramEnabled);
+	}
+
+	return async ({
+		result,
+		update,
+	}: {
+		result: ActionResult;
+		update: () => Promise<void>;
+	}) => {
+		if (result.type === "success") {
+			// Update Server State Reference to reflect successful save
+			if (section === "appearance") {
+				serverState.codeTheme = codeTheme;
+			} else if (section === "ai") {
+				serverState.apiKey = apiKey;
+				serverState.temperature = temperature;
+				serverState.maxTokens = maxTokens;
+			} else if (section === "system") {
+				serverState.systemInstruction = systemInstruction;
+			} else if (section === "integrations") {
+				serverState.telegramEnabled = telegramEnabled;
+				serverState.telegramBotToken = telegramBotToken;
+				serverState.telegramChatId = telegramChatId;
+				serverState.telegramSendOnNewMessage = telegramSendOnNewMessage;
+				serverState.telegramSendOnError = telegramSendOnError;
+			}
+		}
+		await update();
+	};
+};
+
+// ... Helper functions for UI interactions (telegram tests, help toggle) ...
 
 function handleTelegramToggle() {
 	telegramEnabled = !telegramEnabled;
-	integrationsStore.toggleTelegram(telegramEnabled);
+	// Don't save immediately to store, wait for Save button.
+	// integrationsStore.toggleTelegram(telegramEnabled); <--- Removed auto-save
 }
-
-function handleTelegramConfigSave() {
-	integrationsStore.setTelegramConfig({
-		botToken: telegramBotToken,
-		chatId: telegramChatId,
-		sendOnNewMessage: telegramSendOnNewMessage,
-		sendOnError: telegramSendOnError,
-	});
-
-	isTelegramSaved = true;
-	setTimeout(() => {
-		isTelegramSaved = false;
-	}, 3000);
-}
-
-let telegramErrorMessage = $state("");
-
-// État pour le collapse de l'aide
-let isHelpCollapsed = $state(true);
 
 function toggleHelp() {
 	isHelpCollapsed = !isHelpCollapsed;
@@ -107,23 +208,19 @@ function toggleHelp() {
 
 async function testTelegramConnection() {
 	if (!telegramBotToken) return;
-
 	telegramTestStatus = "testing";
 	telegramErrorMessage = "";
-
 	const result =
 		await integrationsStore.testTelegramConnection(telegramBotToken);
-
 	if (result.ok) {
 		telegramTestStatus = "success";
 		if (result.bot?.username) {
-			telegramErrorMessage = `Bot @${result.bot.username} connecté`;
+			telegramErrorMessage = `Bot @${result.bot.username} connecte`;
 		}
 	} else {
 		telegramTestStatus = "error";
 		telegramErrorMessage = result.error || "Erreur de connexion";
 	}
-
 	setTimeout(() => {
 		telegramTestStatus = "idle";
 		telegramErrorMessage = "";
@@ -132,23 +229,19 @@ async function testTelegramConnection() {
 
 async function sendTelegramTestMessage() {
 	if (!telegramBotToken || !telegramChatId) return;
-
 	telegramTestStatus = "testing";
 	telegramErrorMessage = "";
-
 	const result = await integrationsStore.sendTelegramTestMessage(
 		telegramBotToken,
 		telegramChatId,
 	);
-
 	if (result.ok) {
 		telegramTestStatus = "success";
-		telegramErrorMessage = "Message envoyé !";
+		telegramErrorMessage = "Message envoye !";
 	} else {
 		telegramTestStatus = "error";
-		telegramErrorMessage = result.error || "Échec de l'envoi";
+		telegramErrorMessage = result.error || "Echec de l'envoi";
 	}
-
 	setTimeout(() => {
 		telegramTestStatus = "idle";
 		telegramErrorMessage = "";
@@ -157,7 +250,6 @@ async function sendTelegramTestMessage() {
 
 async function handleAddDocument() {
 	if (!kbText.trim()) return;
-
 	isIndexing = true;
 	try {
 		const ragService = RAGService.getInstance();
@@ -191,150 +283,195 @@ async function handleAddDocument() {
 
   <div class="settings-grid">
     <!-- Section Apparence -->
-    <section class="settings-card">
-      <div class="card-header">
-        <div class="icon-wrapper theme">
-          <Sun size={20} />
-        </div>
-        <h2>Apparence</h2>
-      </div>
-
-      <div class="card-content">
-        <div class="setting-item">
-          <div class="setting-label">
-            <span>Theme de l'interface</span>
-            <small>Choisissez entre le mode clair et sombre</small>
+    <form
+      method="POST"
+      action="?/saveSettings"
+      use:enhance={handleSubmit}
+      class="settings-form"
+    >
+      <input type="hidden" name="section" value="appearance" />
+      <section class="settings-card">
+        <div class="card-header">
+          <div class="icon-wrapper theme">
+            <Sun size={20} />
           </div>
-          <button class="theme-toggle" onclick={() => themeStore.toggle()}>
-            {#if $themeStore.isDark}
-              <Moon size={16} class="theme-icon" />
-              Mode Sombre
-            {:else}
-              <Sun size={16} class="theme-icon" />
-              Mode Clair
-            {/if}
-          </button>
+          <h2>Apparence</h2>
         </div>
 
-        <div class="setting-item">
-          <div class="setting-label">
-            <span>Theme du code</span>
-            <small>Style des blocs de code</small>
+        <div class="card-content">
+          <div class="setting-item">
+            <div class="setting-label">
+              <span>Theme de l'interface</span>
+              <small>Choisissez entre le mode clair et sombre</small>
+            </div>
+            <button
+              class="theme-toggle"
+              onclick={(e) => { e.preventDefault(); themeStore.toggle(); }}
+            >
+              {#if $themeStore.isDark}
+                <Moon size={16} class="theme-icon" />
+                Mode Sombre
+              {:else}
+                <Sun size={16} class="theme-icon" />
+                Mode Clair
+              {/if}
+            </button>
           </div>
-          <select bind:value={codeTheme} class="select-input">
-            <option value="tokyo-night">Tokyo Night</option>
-            <option value="github-dark">GitHub Dark</option>
-            <option value="dracula">Dracula</option>
-          </select>
+
+          <div class="setting-item">
+            <div class="setting-label">
+              <span>Theme du code</span>
+              <small>Style des blocs de code</small>
+            </div>
+            <select bind:value={codeTheme} class="select-input">
+              <option value="tokyo-night">Tokyo Night</option>
+              <option value="github-dark">GitHub Dark</option>
+              <option value="dracula">Dracula</option>
+            </select>
+          </div>
+
+          <div class="card-footer">
+            <button class="save-btn-small" disabled={!isDirty('appearance')}>
+               Enregistrer
+            </button>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </form>
 
     <!-- Section Configuration AI -->
-    <section class="settings-card">
-      <div class="card-header">
-        <div class="icon-wrapper ai">
-          <Mic size={20} />
-        </div>
-        <h2>Configuration AI (Hugging Face)</h2>
-      </div>
-
-      <div class="card-content">
-        <div class="setting-item">
-          <div class="setting-label">
-            <span>Cle API Hugging Face</span>
-            <small>Necessaire pour utiliser les modeles open source</small>
+    <form
+      method="POST"
+      action="?/saveSettings"
+      use:enhance={handleSubmit}
+      class="settings-form"
+    >
+      <input type="hidden" name="section" value="ai" />
+      <section class="settings-card">
+        <div class="card-header">
+          <div class="icon-wrapper ai">
+            <Mic size={20} />
           </div>
-          <div class="input-wrapper">
-            <input
-              type="password"
-              placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-              bind:value={apiKey}
-              class="text-input"
-            />
-            <a
-              href="https://huggingface.co/settings/tokens"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="link-helper"
-            >
-              Obtenir une cle gratuite →
-            </a>
-          </div>
+          <h2>Configuration AI (Hugging Face)</h2>
         </div>
 
-        <div class="setting-item">
-          <div class="setting-label">
-            <span>Temperature ({temperature})</span>
-            <small>Plus la valeur est elevee, plus l'IA est creative</small>
-          </div>
-          <div class="slider-wrapper">
-            <input
-              type="range"
-              min="0.1"
-              max="1"
-              step="0.1"
-              bind:value={temperature}
-              class="range-input"
-            />
-            <div class="range-labels">
-              <span>Precis</span>
-              <span>Creatif</span>
+        <div class="card-content">
+          <div class="setting-item">
+            <div class="setting-label">
+              <span>Cle API Hugging Face</span>
+              <small>Necessaire pour utiliser les modeles open source</small>
+            </div>
+            <div class="input-wrapper">
+              <input
+                type="password"
+                placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                bind:value={apiKey}
+                class="text-input"
+              />
+              <a
+                href="https://huggingface.co/settings/tokens"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="link-helper"
+              >
+                Obtenir une cle gratuite →
+              </a>
             </div>
           </div>
-        </div>
 
-        <div class="setting-item">
-          <div class="setting-label">
-            <span>Longueur maximale ({maxTokens} tokens)</span>
-            <small>Limite la longueur des reponses</small>
+          <div class="setting-item">
+            <div class="setting-label">
+              <span>Temperature ({temperature})</span>
+              <small>Plus la valeur est elevee, plus l'IA est creative</small>
+            </div>
+            <div class="slider-wrapper">
+              <input
+                type="range"
+                min="0.1"
+                max="1"
+                step="0.1"
+                bind:value={temperature}
+                class="range-input"
+              />
+              <div class="range-labels">
+                <span>Precis</span>
+                <span>Creatif</span>
+              </div>
+            </div>
           </div>
-          <div class="slider-wrapper">
-            <input
-              type="range"
-              min="256"
-              max="4096"
-              step="256"
-              bind:value={maxTokens}
-              class="range-input"
-            />
+
+          <div class="setting-item">
+            <div class="setting-label">
+              <span>Longueur maximale ({maxTokens} tokens)</span>
+              <small>Limite la longueur des reponses</small>
+            </div>
+            <div class="slider-wrapper">
+              <input
+                type="range"
+                min="256"
+                max="4096"
+                step="256"
+                bind:value={maxTokens}
+                class="range-input"
+              />
+            </div>
+          </div>
+
+          <div class="card-footer">
+            <button class="save-btn-small" disabled={!isDirty('ai')}>
+               Enregistrer
+            </button>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </form>
 
     <!-- Section Instructions Systeme -->
-    <section class="settings-card">
-      <div class="card-header">
-        <div class="icon-wrapper system">
-          <FileText size={20} />
-        </div>
-        <h2>Instructions Systeme</h2>
-      </div>
-
-      <div class="card-content">
-        <div class="setting-item full-width">
-          <div class="setting-label">
-            <span>Prompt Systeme</span>
-            <small
-              >Instructions globales pour definir le comportement de l'IA.</small
-            >
+    <form
+      method="POST"
+      action="?/saveSettings"
+      use:enhance={handleSubmit}
+      class="settings-form"
+    >
+      <input type="hidden" name="section" value="system" />
+      <section class="settings-card">
+        <div class="card-header">
+          <div class="icon-wrapper system">
+            <FileText size={20} />
           </div>
-          <div class="input-wrapper">
-            <textarea
-              bind:value={systemInstruction}
-              class="text-area"
-              rows="10"
-              placeholder="Entrez vos instructions systeme ici..."
-            ></textarea>
-            <div class="helper-text">
-              Ces instructions seront envoyees a chaque debut de conversation
-              pour guider l'IA.
+          <h2>Instructions Systeme</h2>
+        </div>
+
+        <div class="card-content">
+          <div class="setting-item full-width">
+            <div class="setting-label">
+              <span>Prompt Systeme</span>
+              <small
+                >Instructions globales pour definir le comportement de l'IA.</small
+              >
+            </div>
+            <div class="input-wrapper">
+              <textarea
+                bind:value={systemInstruction}
+                class="text-area"
+                rows="10"
+                placeholder="Entrez vos instructions systeme ici..."
+              ></textarea>
+              <div class="helper-text">
+                Ces instructions seront envoyees a chaque debut de conversation
+                pour guider l'IA.
+              </div>
             </div>
           </div>
+          
+          <div class="card-footer">
+            <button class="save-btn-small" disabled={!isDirty('system')}>
+               Enregistrer
+            </button>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </form>
 
     <!-- Section Knowledge Base -->
     <section class="settings-card">
@@ -385,272 +522,267 @@ async function handleAddDocument() {
     </section>
 
     <!-- Section Intégrations -->
-    <section class="settings-card">
-      <div class="card-header">
-        <div class="icon-wrapper integration">
-          <Heart size={20} />
-        </div>
-        <h2>Intégrations</h2>
-      </div>
-
-      <div class="card-content">
-        <div class="integration-help">
-          <p>
-            Connectez ChatAI à vos systèmes externes pour recevoir des
-            notifications en temps réel.
-          </p>
-          <a href="/docs/integrations" class="docs-link">
-            <FileText size={16} />
-            Voir la documentation
-          </a>
-        </div>
-        <!-- Intégration Telegram -->
-        <div class="integration-item">
-          <div class="integration-header">
-            <div class="integration-info">
-              <div class="integration-title">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.93 1.23-5.46 3.61-.52.36-.99.53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.37-.49 1.02-.74 4.02-1.76 6.7-2.92 8.03-3.49 3.82-1.58 4.62-1.85 5.14-1.86.11 0 .37.03.53.16.14.11.18.26.2.37.02.06.04.19.02.3z"
-                    fill="currentColor"
-                  />
-                </svg>
-                <span>Telegram</span>
-              </div>
-              <small>Recevez des notifications via Telegram</small>
-            </div>
-            <label class="toggle-switch">
-              <input
-                type="checkbox"
-                checked={telegramEnabled}
-                onchange={handleTelegramToggle}
-              />
-              <span class="toggle-slider"></span>
-            </label>
+    <form
+      method="POST"
+      action="?/saveSettings"
+      use:enhance={handleSubmit}
+      class="settings-form"
+    >
+      <input type="hidden" name="section" value="integrations" />
+      <section class="settings-card">
+        <div class="card-header">
+          <div class="icon-wrapper integration">
+            <Heart size={20} />
           </div>
+          <h2>Intégrations</h2>
+        </div>
 
-          {#if telegramEnabled}
-            <div class="integration-config">
-              <div class="setting-item">
-                <div class="setting-label">
-                  <span>Token du Bot</span>
-                  <small>Créez un bot via @BotFather sur Telegram</small>
-                </div>
-                <div class="input-wrapper">
-                  <input
-                    type="password"
-                    placeholder="1234567890:ABCdefghijklmnopqrstuvwxyz"
-                    bind:value={telegramBotToken}
-                    class="text-input"
-                  />
-                  <div class="button-group">
-                    <button
-                      class="test-btn"
-                      onclick={testTelegramConnection}
-                      disabled={!telegramBotToken ||
-                        telegramTestStatus === "testing"}
-                    >
-                      {#if telegramTestStatus === "testing"}
-                        Test...
-                      {:else if telegramTestStatus === "success"}
-                        <Check size={14} />
-                        Valide
-                      {:else if telegramTestStatus === "error"}
-                        <X size={14} />
-                        Erreur
-                      {:else}
-                        Tester Bot
-                      {/if}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div class="setting-item">
-                <div class="setting-label">
-                  <span>Chat ID</span>
-                  <small>ID du chat où envoyer les notifications</small>
-                </div>
-                <div class="input-wrapper">
-                  <input
-                    type="text"
-                    placeholder="-1001234567890"
-                    bind:value={telegramChatId}
-                    class="text-input"
-                  />
-                  <div class="button-group">
-                    <button
-                      class="test-btn"
-                      onclick={sendTelegramTestMessage}
-                      disabled={!telegramBotToken ||
-                        !telegramChatId ||
-                        telegramTestStatus === "testing"}
-                    >
-                      {#if telegramTestStatus === "testing"}
-                        Envoi...
-                      {:else if telegramTestStatus === "success"}
-                        <Check size={14} />
-                        Envoyé
-                      {:else if telegramTestStatus === "error"}
-                        <X size={14} />
-                        Échec
-                      {:else}
-                        Test Message
-                      {/if}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {#if telegramErrorMessage}
-                <div
-                  class="telegram-status"
-                  class:success={telegramTestStatus === "success"}
-                  class:error={telegramTestStatus === "error"}
-                >
-                  {telegramErrorMessage}
-                </div>
-              {/if}
-
-              <div class="setting-item">
-                <div class="setting-label">
-                  <span>Options de notification</span>
-                  <small>Configurez quand recevoir des notifications</small>
-                </div>
-                <div class="checkbox-group">
-                  <label class="checkbox-item">
-                    <input
-                      type="checkbox"
-                      bind:checked={telegramSendOnNewMessage}
-                    />
-                    <span>Nouveaux messages</span>
-                  </label>
-                  <label class="checkbox-item">
-                    <input type="checkbox" bind:checked={telegramSendOnError} />
-                    <span>Erreurs système</span>
-                  </label>
-                </div>
-              </div>
-
-              <!-- Tutoriel d'aide -->
-              <div class="telegram-help">
-                <div
-                  class="help-title"
-                  onclick={() => {
-                    isHelpCollapsed = !isHelpCollapsed;
-                  }}
-                  role="button"
-                  tabindex="0"
-                  onkeydown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      isHelpCollapsed = !isHelpCollapsed;
-                    }
-                  }}
-                >
-                  <ChevronRight
-                    size={16}
-                    class={`help-icon ${!isHelpCollapsed ? "rotated" : ""}`}
-                  />
-                  <span>Comment configurer ?</span>
-                </div>
-
-                {#if !isHelpCollapsed}
-                  <div
-                    class="help-content"
-                    transition:slide={{ duration: 300 }}
+        <div class="card-content">
+          <div class="integration-help">
+            <p>
+              Connectez ChatAI à vos systèmes externes pour recevoir des
+              notifications en temps réel.
+            </p>
+            <a href="/docs/integrations" class="docs-link">
+              <FileText size={16} />
+              Voir la documentation
+            </a>
+          </div>
+          <!-- Intégration Telegram -->
+          <div class="integration-item">
+            <div class="integration-header">
+              <div class="integration-info">
+                <div class="integration-title">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
                   >
-                    <div class="help-section">
-                      <h5>Obtenir le Token du Bot</h5>
-                      <ol>
-                        <li>
-                          Ouvrez Telegram et recherchez <strong
-                            >@BotFather</strong
-                          >
-                        </li>
-                        <li>
-                          Envoyez <code>/newbot</code> et suivez les instructions
-                        </li>
-                        <li>
-                          Copiez le token fourni (format: <code
-                            >123456:ABC-xyz...</code
-                          >)
-                        </li>
-                      </ol>
-                    </div>
+                    <path
+                      d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.93 1.23-5.46 3.61-.52.36-.99.53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.37-.49 1.02-.74 4.02-1.76 6.7-2.92 8.03-3.49 3.82-1.58 4.62-1.85 5.14-1.86.11 0 .37.03.53.16.14.11.18.26.2.37.02.06.04.19.02.3z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                  <span>Telegram</span>
+                </div>
+                <small>Recevez des notifications via Telegram</small>
+              </div>
+              <label class="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={telegramEnabled}
+                  onchange={handleTelegramToggle}
+                />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
 
-                    <div class="help-section">
-                      <h5>Obtenir votre Chat ID</h5>
-                      <div class="help-method">
-                        <strong>Méthode simple :</strong>
+            {#if telegramEnabled}
+              <div class="integration-config">
+                <div class="setting-item">
+                  <div class="setting-label">
+                    <span>Token du Bot</span>
+                    <small>Créez un bot via @BotFather sur Telegram</small>
+                  </div>
+                  <div class="input-wrapper">
+                    <input
+                      type="password"
+                      placeholder="1234567890:ABCdefghijklmnopqrstuvwxyz"
+                      bind:value={telegramBotToken}
+                      class="text-input"
+                    />
+                    <div class="button-group">
+                      <button
+                        class="test-btn"
+                        onclick={(e) => { e.preventDefault(); testTelegramConnection(); }}
+                        disabled={!telegramBotToken ||
+                          telegramTestStatus === "testing"}
+                      >
+                        {#if telegramTestStatus === "testing"}
+                          Test...
+                        {:else if telegramTestStatus === "success"}
+                          <Check size={14} />
+                          Valide
+                        {:else if telegramTestStatus === "error"}
+                          <X size={14} />
+                          Erreur
+                        {:else}
+                          Tester Bot
+                        {/if}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="setting-item">
+                  <div class="setting-label">
+                    <span>Chat ID</span>
+                    <small>ID du chat où envoyer les notifications</small>
+                  </div>
+                  <div class="input-wrapper">
+                    <input
+                      type="text"
+                      placeholder="-1001234567890"
+                      bind:value={telegramChatId}
+                      class="text-input"
+                    />
+                    <div class="button-group">
+                      <button
+                        class="test-btn"
+                        onclick={(e) => { e.preventDefault(); sendTelegramTestMessage(); }}
+                        disabled={!telegramBotToken ||
+                          !telegramChatId ||
+                          telegramTestStatus === "testing"}
+                      >
+                        {#if telegramTestStatus === "testing"}
+                          Envoi...
+                        {:else if telegramTestStatus === "success"}
+                          <Check size={14} />
+                          Envoyé
+                        {:else if telegramTestStatus === "error"}
+                          <X size={14} />
+                          Échec
+                        {:else}
+                          Test Message
+                        {/if}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {#if telegramErrorMessage}
+                  <div
+                    class="telegram-status"
+                    class:success={telegramTestStatus === "success"}
+                    class:error={telegramTestStatus === "error"}
+                  >
+                    {telegramErrorMessage}
+                  </div>
+                {/if}
+
+                <div class="setting-item">
+                  <div class="setting-label">
+                    <span>Options de notification</span>
+                    <small>Configurez quand recevoir des notifications</small>
+                  </div>
+                  <div class="checkbox-group">
+                    <label class="checkbox-item">
+                      <input
+                        type="checkbox"
+                        bind:checked={telegramSendOnNewMessage}
+                      />
+                      <span>Nouveaux messages</span>
+                    </label>
+                    <label class="checkbox-item">
+                      <input type="checkbox" bind:checked={telegramSendOnError} />
+                      <span>Erreurs système</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Tutoriel d'aide -->
+                <div class="telegram-help">
+                  <div
+                    class="help-title"
+                    onclick={() => {
+                      isHelpCollapsed = !isHelpCollapsed;
+                    }}
+                    role="button"
+                    tabindex="0"
+                    onkeydown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        isHelpCollapsed = !isHelpCollapsed;
+                      }
+                    }}
+                  >
+                    <ChevronRight
+                      size={16}
+                      class={`help-icon ${!isHelpCollapsed ? "rotated" : ""}`}
+                    />
+                    <span>Comment configurer ?</span>
+                  </div>
+
+                  {#if !isHelpCollapsed}
+                    <div
+                      class="help-content"
+                      transition:slide={{ duration: 300 }}
+                    >
+                      <div class="help-section">
+                        <h5>Obtenir le Token du Bot</h5>
                         <ol>
                           <li>
-                            Recherchez <strong>@userinfobot</strong> sur Telegram
-                          </li>
-                          <li>Envoyez-lui n'importe quel message</li>
-                          <li>Il vous répondra avec votre Chat ID</li>
-                        </ol>
-                      </div>
-                      <div class="help-method">
-                        <strong>Pour un groupe :</strong>
-                        <ol>
-                          <li>Ajoutez votre bot au groupe</li>
-                          <li>Envoyez un message dans le groupe</li>
-                          <li>
-                            Visitez : <code
-                              >https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code
+                            Ouvrez Telegram et recherchez <strong
+                              >@BotFather</strong
                             >
                           </li>
                           <li>
-                            Cherchez <code>"chat":{'"id":'}</code> dans la réponse
+                            Envoyez <code>/newbot</code> et suivez les instructions
+                          </li>
+                          <li>
+                            Copiez le token fourni (format: <code
+                              >123456:ABC-xyz...</code
+                            >)
                           </li>
                         </ol>
                       </div>
-                      <div class="help-note">
-                        <strong>Note :</strong>
-                        Les Chat ID personnels sont positifs (ex:
-                        <code>123456789</code>), les groupes sont négatifs (ex:
-                        <code>-1001234567890</code>)
+
+                      <div class="help-section">
+                        <h5>Obtenir votre Chat ID</h5>
+                        <div class="help-method">
+                          <strong>Méthode simple :</strong>
+                          <ol>
+                            <li>
+                              Recherchez <strong>@userinfobot</strong> sur Telegram
+                            </li>
+                            <li>Envoyez-lui n'importe quel message</li>
+                            <li>Il vous répondra avec votre Chat ID</li>
+                          </ol>
+                        </div>
+                        <div class="help-method">
+                          <strong>Pour un groupe :</strong>
+                          <ol>
+                            <li>Ajoutez votre bot au groupe</li>
+                            <li>Envoyez un message dans le groupe</li>
+                            <li>
+                              Visitez : <code
+                                >https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code
+                              >
+                            </li>
+                            <li>
+                              Cherchez <code>"chat":{'"id":'}</code> dans la réponse
+                            </li>
+                          </ol>
+                        </div>
+                        <div class="help-note">
+                          <strong>Note :</strong>
+                          Les Chat ID personnels sont positifs (ex:
+                          <code>123456789</code>), les groupes sont négatifs (ex:
+                          <code>-1001234567890</code>)
+                        </div>
                       </div>
                     </div>
-                  </div>
-                {/if}
-              </div>
-
-              <div class="integration-actions">
-                <button
-                  class="save-btn-small"
-                  onclick={handleTelegramConfigSave}
-                  disabled={isTelegramSaved}
-                >
-                  {#if isTelegramSaved}
-                    ✓ Configuration sauvegardée
-                  {:else}
-                    Sauvegarder la configuration
                   {/if}
-                </button>
-              </div>
-            </div>
-          {/if}
-        </div>
-      </div>
-    </section>
+                </div>
 
-    <div class="settings-actions">
-      <button class="save-btn" onclick={handleSave} disabled={isSaved}>
-        {#if isSaved}
-          <span>✓ Enregistre ! </span>
-        {:else}
-          Enregistrer les modifications
-        {/if}
-      </button>
-    </div>
+                <div class="integration-actions">
+                  <button
+                    class="save-btn-small"
+                    disabled={!isDirty('integrations')}
+                  >
+                     Enregistrer
+                  </button>
+                </div>
+              </div>
+            {/if}
+          </div>
+        </div>
+      </section>
+    </form>
+
+
   </div>
 </div>
 
@@ -982,35 +1114,7 @@ async function handleAddDocument() {
     letter-spacing: 0.5px;
   }
 
-  .settings-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 16px;
-  }
 
-  .save-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 24px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    border-radius: 12px;
-    color: white;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .save-btn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-  }
-
-  .save-btn:disabled {
-    background: #10b981;
-    cursor: default;
-  }
 
   /* Styles pour les intégrations */
   .integration-item {
@@ -1346,5 +1450,12 @@ async function handleAddDocument() {
     border-radius: 4px;
     font-size: 12px;
     color: #818cf8;
+  }
+  .card-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
   }
 </style>

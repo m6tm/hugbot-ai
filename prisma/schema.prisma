@@ -9,21 +9,43 @@ datasource db {
 }
 
 model User {
-    id             String         @id @default(uuid())
-    email          String         @unique
-    createdAt      DateTime       @default(now())
-    updatedAt      DateTime       @updatedAt
-    huggingFaceKey String?
-    conversations  Conversation[]
+    id            String         @id @default(uuid())
+    email         String         @unique
+    createdAt     DateTime       @default(now())
+    updatedAt     DateTime       @updatedAt
+    conversations Conversation[]
+    setting       Setting?
 
     @@map("users")
 }
 
-model DefaultSettings {
-    id             String  @id @default(uuid())
-    huggingFaceKey String? // For global/default key if needed, or keeping it strictly per user
+model Setting {
+    id     String @id @default(uuid())
+    userId String @unique
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@map("default_settings")
+    // AI Configuration
+    apiKey      String? // Encrypted Hugging Face Key
+    temperature Float   @default(0.7)
+    maxTokens   Int     @default(1024)
+
+    // Appearance
+    codeTheme String @default("tokyo-night")
+
+    // System
+    systemInstruction String? @db.Text
+
+    // Integrations (Telegram)
+    telegramEnabled          Boolean @default(false)
+    telegramBotToken         String?
+    telegramChatId           String?
+    telegramSendOnNewMessage Boolean @default(true)
+    telegramSendOnError      Boolean @default(true)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("settings")
 }
 
 model Conversation {

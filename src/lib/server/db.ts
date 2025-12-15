@@ -12,6 +12,15 @@ export const db = {
 		update: (args: Prisma.UserUpdateArgs) => prisma.user.update(args),
 	},
 
+	// Setting operations
+	setting: {
+		findUnique: (args: Prisma.SettingFindUniqueArgs) =>
+			prisma.setting.findUnique(args),
+		create: (args: Prisma.SettingCreateArgs) => prisma.setting.create(args),
+		update: (args: Prisma.SettingUpdateArgs) => prisma.setting.update(args),
+		upsert: (args: Prisma.SettingUpsertArgs) => prisma.setting.upsert(args),
+	},
+
 	// Conversation operations
 	conversation: {
 		findMany: (args: Prisma.ConversationFindManyArgs) =>
