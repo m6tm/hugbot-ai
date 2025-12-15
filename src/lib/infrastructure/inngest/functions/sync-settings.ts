@@ -49,8 +49,9 @@ export const syncSettings = inngest.createFunction(
 					updateData.codeTheme = settings.codeTheme;
 				}
 			} else if (settings.section === "ai") {
-				if (settings.apiKey) {
-					updateData.apiKey = encrypt(settings.apiKey);
+				if (settings.apiKey !== undefined) {
+					// Si la clé est vide, on l'efface en base (null)
+					updateData.apiKey = settings.apiKey ? encrypt(settings.apiKey) : null;
 				}
 				if (settings.temperature !== undefined) {
 					updateData.temperature = settings.temperature;
@@ -66,8 +67,11 @@ export const syncSettings = inngest.createFunction(
 				if (settings.telegramEnabled !== undefined) {
 					updateData.telegramEnabled = settings.telegramEnabled;
 				}
-				if (settings.telegramBotToken) {
-					updateData.telegramBotToken = encrypt(settings.telegramBotToken);
+				if (settings.telegramBotToken !== undefined) {
+					// Si le token est vide, on l'efface en base (null)
+					updateData.telegramBotToken = settings.telegramBotToken
+						? encrypt(settings.telegramBotToken)
+						: null;
 				}
 				if (settings.telegramChatId !== undefined) {
 					updateData.telegramChatId = settings.telegramChatId;

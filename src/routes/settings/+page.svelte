@@ -1,314 +1,314 @@
 <script lang="ts">
-  /**
-   * Page des parametres
-   */
+/**
+ * Page des parametres
+ */
 
-  import {
-    ArrowLeft,
-    Check,
-    ChevronRight,
-    Database,
-    FileText,
-    Heart,
-    Loader2,
-    Mic,
-    Moon,
-    Sun,
-    X,
-  } from "lucide-svelte";
-  import { onMount } from "svelte";
-  import { slide } from "svelte/transition";
-  import { enhance } from "$app/forms";
-  import { goto } from "$app/navigation";
-  import { RAGService } from "$lib/ai/rag";
-  import { httpClient } from "$lib/infrastructure/http";
-  import { integrationsStore, settingsStore, themeStore } from "$lib/stores";
+import {
+	ArrowLeft,
+	Check,
+	ChevronRight,
+	Database,
+	FileText,
+	Heart,
+	Loader2,
+	Mic,
+	Moon,
+	Sun,
+	X,
+} from "lucide-svelte";
+import { onMount } from "svelte";
+import { slide } from "svelte/transition";
+import { enhance } from "$app/forms";
+import { goto } from "$app/navigation";
+import { RAGService } from "$lib/ai/rag";
+import { httpClient } from "$lib/infrastructure/http";
+import { integrationsStore, settingsStore, themeStore } from "$lib/stores";
 
-  let { data } = $props();
+let { data } = $props();
 
-  // Local state for form inputs
-  let apiKey = $state("");
-  let temperature = $state(0.7);
-  let maxTokens = $state(1024);
-  let codeTheme = $state("tokyo-night");
-  let systemInstruction = $state("");
+// Local state for form inputs
+let apiKey = $state("");
+let temperature = $state(0.7);
+let maxTokens = $state(1024);
+let codeTheme = $state("tokyo-night");
+let systemInstruction = $state("");
 
-  // Telegram Integration Locals
-  let telegramEnabled = $state(false);
-  let telegramBotToken = $state("");
-  let telegramChatId = $state("");
-  let telegramSendOnNewMessage = $state(true);
-  let telegramSendOnError = $state(true);
-  let telegramTestStatus = $state<"idle" | "testing" | "success" | "error">(
-    "idle"
-  );
-  let telegramErrorMessage = $state("");
+// Telegram Integration Locals
+let telegramEnabled = $state(false);
+let telegramBotToken = $state("");
+let telegramChatId = $state("");
+let telegramSendOnNewMessage = $state(true);
+let telegramSendOnError = $state(true);
+let telegramTestStatus = $state<"idle" | "testing" | "success" | "error">(
+	"idle",
+);
+let telegramErrorMessage = $state("");
 
-  // Knowledge Base Locals
-  let kbText = $state("");
-  let isIndexing = $state(false);
-  let kbSuccess = $state(false);
+// Knowledge Base Locals
+let kbText = $state("");
+let isIndexing = $state(false);
+let kbSuccess = $state(false);
 
-  // Help toggle
-  let isHelpCollapsed = $state(true);
+// Help toggle
+let isHelpCollapsed = $state(true);
 
-  // Loading states pour chaque section
-  let isSavingAppearance = $state(false);
-  let isSavingAi = $state(false);
-  let isSavingSystem = $state(false);
-  let isSavingIntegrations = $state(false);
+// Loading states pour chaque section
+let isSavingAppearance = $state(false);
+let isSavingAi = $state(false);
+let isSavingSystem = $state(false);
+let isSavingIntegrations = $state(false);
 
-  // Server State to track dirty status
-  let serverState = $state({
-    apiKey: "",
-    temperature: 0.7,
-    maxTokens: 1024,
-    codeTheme: "tokyo-night",
-    systemInstruction: "",
-    telegramEnabled: false,
-    telegramBotToken: "",
-    telegramChatId: "",
-    telegramSendOnNewMessage: true,
-    telegramSendOnError: true,
-  });
+// Server State to track dirty status
+let serverState = $state({
+	apiKey: "",
+	temperature: 0.7,
+	maxTokens: 1024,
+	codeTheme: "tokyo-night",
+	systemInstruction: "",
+	telegramEnabled: false,
+	telegramBotToken: "",
+	telegramChatId: "",
+	telegramSendOnNewMessage: true,
+	telegramSendOnError: true,
+});
 
-  onMount(async () => {
-    // 1. Initialize Stores from Dexie
-    await integrationsStore.init();
-    await settingsStore.init();
+onMount(async () => {
+	// 1. Initialize Stores from Dexie
+	await integrationsStore.init();
+	await settingsStore.init();
 
-    // 2. Set Server State AND Local State from server data (data.settings)
-    // This ensures isDirty returns false on initial load
-    if (data.settings) {
-      const settings = data.settings;
+	// 2. Set Server State AND Local State from server data (data.settings)
+	// This ensures isDirty returns false on initial load
+	if (data.settings) {
+		const settings = data.settings;
 
-      // Set local state from server data
-      apiKey = settings.apiKey || "";
-      temperature = settings.temperature ?? 0.7;
-      maxTokens = settings.maxTokens ?? 1024;
-      codeTheme = settings.codeTheme || "tokyo-night";
-      systemInstruction = settings.systemInstruction || "";
-      telegramEnabled = settings.telegramEnabled ?? false;
-      telegramBotToken = settings.telegramBotToken || "";
-      telegramChatId = settings.telegramChatId || "";
-      telegramSendOnNewMessage = settings.telegramSendOnNewMessage ?? true;
-      telegramSendOnError = settings.telegramSendOnError ?? true;
+		// Set local state from server data
+		apiKey = settings.apiKey || "";
+		temperature = settings.temperature ?? 0.7;
+		maxTokens = settings.maxTokens ?? 1024;
+		codeTheme = settings.codeTheme || "tokyo-night";
+		systemInstruction = settings.systemInstruction || "";
+		telegramEnabled = settings.telegramEnabled ?? false;
+		telegramBotToken = settings.telegramBotToken || "";
+		telegramChatId = settings.telegramChatId || "";
+		telegramSendOnNewMessage = settings.telegramSendOnNewMessage ?? true;
+		telegramSendOnError = settings.telegramSendOnError ?? true;
 
-      // Set server state reference (same values)
-      serverState = {
-        apiKey: settings.apiKey || "",
-        temperature: settings.temperature ?? 0.7,
-        maxTokens: settings.maxTokens ?? 1024,
-        codeTheme: settings.codeTheme || "tokyo-night",
-        systemInstruction: settings.systemInstruction || "",
-        telegramEnabled: settings.telegramEnabled ?? false,
-        telegramBotToken: settings.telegramBotToken || "",
-        telegramChatId: settings.telegramChatId || "",
-        telegramSendOnNewMessage: settings.telegramSendOnNewMessage ?? true,
-        telegramSendOnError: settings.telegramSendOnError ?? true,
-      };
-    }
-  });
+		// Set server state reference (same values)
+		serverState = {
+			apiKey: settings.apiKey || "",
+			temperature: settings.temperature ?? 0.7,
+			maxTokens: settings.maxTokens ?? 1024,
+			codeTheme: settings.codeTheme || "tokyo-night",
+			systemInstruction: settings.systemInstruction || "",
+			telegramEnabled: settings.telegramEnabled ?? false,
+			telegramBotToken: settings.telegramBotToken || "",
+			telegramChatId: settings.telegramChatId || "",
+			telegramSendOnNewMessage: settings.telegramSendOnNewMessage ?? true,
+			telegramSendOnError: settings.telegramSendOnError ?? true,
+		};
+	}
+});
 
-  function isDirty(section: string) {
-    if (section === "appearance") {
-      return codeTheme !== serverState.codeTheme; // Theme light/dark is local only via themeStore typically? Or we added it? codeTheme is in DB.
-    }
-    if (section === "ai") {
-      return (
-        apiKey !== serverState.apiKey ||
-        temperature !== serverState.temperature ||
-        maxTokens !== serverState.maxTokens
-      );
-    }
-    if (section === "system") {
-      return systemInstruction !== serverState.systemInstruction;
-    }
-    if (section === "integrations") {
-      return (
-        telegramEnabled !== serverState.telegramEnabled ||
-        telegramBotToken !== serverState.telegramBotToken ||
-        telegramChatId !== serverState.telegramChatId ||
-        telegramSendOnNewMessage !== serverState.telegramSendOnNewMessage ||
-        telegramSendOnError !== serverState.telegramSendOnError
-      );
-    }
-    return false;
-  }
+function isDirty(section: string) {
+	if (section === "appearance") {
+		return codeTheme !== serverState.codeTheme; // Theme light/dark is local only via themeStore typically? Or we added it? codeTheme is in DB.
+	}
+	if (section === "ai") {
+		return (
+			apiKey !== serverState.apiKey ||
+			temperature !== serverState.temperature ||
+			maxTokens !== serverState.maxTokens
+		);
+	}
+	if (section === "system") {
+		return systemInstruction !== serverState.systemInstruction;
+	}
+	if (section === "integrations") {
+		return (
+			telegramEnabled !== serverState.telegramEnabled ||
+			telegramBotToken !== serverState.telegramBotToken ||
+			telegramChatId !== serverState.telegramChatId ||
+			telegramSendOnNewMessage !== serverState.telegramSendOnNewMessage ||
+			telegramSendOnError !== serverState.telegramSendOnError
+		);
+	}
+	return false;
+}
 
-  import type { ActionResult } from "@sveltejs/kit";
+import type { ActionResult } from "@sveltejs/kit";
 
-  /**
-   * Déclenche la synchronisation des paramètres vers Supabase via Inngest
-   */
-  async function triggerSettingsSync(section: string) {
-    const payload: Record<string, unknown> = { section };
+/**
+ * Déclenche la synchronisation des paramètres vers Supabase via Inngest
+ */
+async function triggerSettingsSync(section: string) {
+	const payload: Record<string, unknown> = { section };
 
-    if (section === "appearance") {
-      payload.codeTheme = codeTheme;
-    } else if (section === "ai") {
-      payload.apiKey = apiKey;
-      payload.temperature = temperature;
-      payload.maxTokens = maxTokens;
-    } else if (section === "system") {
-      payload.systemInstruction = systemInstruction;
-    } else if (section === "integrations") {
-      payload.telegramEnabled = telegramEnabled;
-      payload.telegramBotToken = telegramBotToken;
-      payload.telegramChatId = telegramChatId;
-      payload.telegramSendOnNewMessage = telegramSendOnNewMessage;
-      payload.telegramSendOnError = telegramSendOnError;
-    }
+	if (section === "appearance") {
+		payload.codeTheme = codeTheme;
+	} else if (section === "ai") {
+		payload.apiKey = apiKey;
+		payload.temperature = temperature;
+		payload.maxTokens = maxTokens;
+	} else if (section === "system") {
+		payload.systemInstruction = systemInstruction;
+	} else if (section === "integrations") {
+		payload.telegramEnabled = telegramEnabled;
+		payload.telegramBotToken = telegramBotToken;
+		payload.telegramChatId = telegramChatId;
+		payload.telegramSendOnNewMessage = telegramSendOnNewMessage;
+		payload.telegramSendOnError = telegramSendOnError;
+	}
 
-    try {
-      await httpClient.post("/api/sync/settings", payload);
-    } catch (error) {
-      console.error("Erreur lors de la synchronisation des paramètres:", error);
-    }
-  }
+	try {
+		await httpClient.post("/api/sync/settings", payload);
+	} catch (error) {
+		console.error("Erreur lors de la synchronisation des paramètres:", error);
+	}
+}
 
-  const handleSubmit = ({
-    formData,
-    cancel,
-  }: {
-    formData: FormData;
-    cancel: () => void;
-  }) => {
-    const section = formData.get("section") as string;
-    cancel(); // Annuler la soumission native au serveur pour éviter le rechargement/reset
+const handleSubmit = ({
+	formData,
+	cancel,
+}: {
+	formData: FormData;
+	cancel: () => void;
+}) => {
+	const section = formData.get("section") as string;
+	cancel(); // Annuler la soumission native au serveur pour éviter le rechargement/reset
 
-    const runSave = async () => {
-      // Activer le loading
-      if (section === "appearance") isSavingAppearance = true;
-      else if (section === "ai") isSavingAi = true;
-      else if (section === "system") isSavingSystem = true;
-      else if (section === "integrations") isSavingIntegrations = true;
+	const runSave = async () => {
+		// Activer le loading
+		if (section === "appearance") isSavingAppearance = true;
+		else if (section === "ai") isSavingAi = true;
+		else if (section === "system") isSavingSystem = true;
+		else if (section === "integrations") isSavingIntegrations = true;
 
-      try {
-        // 1. Sauvegarde locale dans DexieJS via les stores
-        if (section === "appearance") {
-          settingsStore.setCodeTheme(codeTheme);
-        } else if (section === "ai") {
-          settingsStore.setApiKey(apiKey);
-          settingsStore.setTemperature(temperature);
-          settingsStore.setMaxTokens(maxTokens);
-        } else if (section === "system") {
-          settingsStore.setSystemInstruction(systemInstruction);
-        } else if (section === "integrations") {
-          integrationsStore.setTelegramConfig({
-            enabled: telegramEnabled,
-            botToken: telegramBotToken,
-            chatId: telegramChatId,
-            sendOnNewMessage: telegramSendOnNewMessage,
-            sendOnError: telegramSendOnError,
-          });
-          integrationsStore.toggleTelegram(telegramEnabled);
-        }
+		try {
+			// 1. Sauvegarde locale dans DexieJS via les stores
+			if (section === "appearance") {
+				settingsStore.setCodeTheme(codeTheme);
+			} else if (section === "ai") {
+				settingsStore.setApiKey(apiKey);
+				settingsStore.setTemperature(temperature);
+				settingsStore.setMaxTokens(maxTokens);
+			} else if (section === "system") {
+				settingsStore.setSystemInstruction(systemInstruction);
+			} else if (section === "integrations") {
+				integrationsStore.setTelegramConfig({
+					enabled: telegramEnabled,
+					botToken: telegramBotToken,
+					chatId: telegramChatId,
+					sendOnNewMessage: telegramSendOnNewMessage,
+					sendOnError: telegramSendOnError,
+				});
+				integrationsStore.toggleTelegram(telegramEnabled);
+			}
 
-        // 2. Déclencher la synchronisation async vers Supabase via Inngest
-        await triggerSettingsSync(section);
+			// 2. Déclencher la synchronisation async vers Supabase via Inngest
+			await triggerSettingsSync(section);
 
-        // 3. Mettre à jour le serverState pour refléter la sauvegarde (Optimistic UI)
-        if (section === "appearance") {
-          serverState.codeTheme = codeTheme;
-        } else if (section === "ai") {
-          serverState.apiKey = apiKey;
-          serverState.temperature = temperature;
-          serverState.maxTokens = maxTokens;
-        } else if (section === "system") {
-          serverState.systemInstruction = systemInstruction;
-        } else if (section === "integrations") {
-          serverState.telegramEnabled = telegramEnabled;
-          serverState.telegramBotToken = telegramBotToken;
-          serverState.telegramChatId = telegramChatId;
-          serverState.telegramSendOnNewMessage = telegramSendOnNewMessage;
-          serverState.telegramSendOnError = telegramSendOnError;
-        }
-      } catch (error) {
-        console.error("Erreur lors de la sauvegarde:", error);
-      } finally {
-        // Désactiver le loading
-        if (section === "appearance") isSavingAppearance = false;
-        else if (section === "ai") isSavingAi = false;
-        else if (section === "system") isSavingSystem = false;
-        else if (section === "integrations") isSavingIntegrations = false;
-      }
-    };
+			// 3. Mettre à jour le serverState pour refléter la sauvegarde (Optimistic UI)
+			if (section === "appearance") {
+				serverState.codeTheme = codeTheme;
+			} else if (section === "ai") {
+				serverState.apiKey = apiKey;
+				serverState.temperature = temperature;
+				serverState.maxTokens = maxTokens;
+			} else if (section === "system") {
+				serverState.systemInstruction = systemInstruction;
+			} else if (section === "integrations") {
+				serverState.telegramEnabled = telegramEnabled;
+				serverState.telegramBotToken = telegramBotToken;
+				serverState.telegramChatId = telegramChatId;
+				serverState.telegramSendOnNewMessage = telegramSendOnNewMessage;
+				serverState.telegramSendOnError = telegramSendOnError;
+			}
+		} catch (error) {
+			console.error("Erreur lors de la sauvegarde:", error);
+		} finally {
+			// Désactiver le loading
+			if (section === "appearance") isSavingAppearance = false;
+			else if (section === "ai") isSavingAi = false;
+			else if (section === "system") isSavingSystem = false;
+			else if (section === "integrations") isSavingIntegrations = false;
+		}
+	};
 
-    runSave();
-  };
+	runSave();
+};
 
-  // ... Helper functions for UI interactions (telegram tests, help toggle) ...
+// ... Helper functions for UI interactions (telegram tests, help toggle) ...
 
-  function handleTelegramToggle() {
-    telegramEnabled = !telegramEnabled;
-    // Don't save immediately to store, wait for Save button.
-    // integrationsStore.toggleTelegram(telegramEnabled); <--- Removed auto-save
-  }
+function handleTelegramToggle() {
+	telegramEnabled = !telegramEnabled;
+	// Don't save immediately to store, wait for Save button.
+	// integrationsStore.toggleTelegram(telegramEnabled); <--- Removed auto-save
+}
 
-  function toggleHelp() {
-    isHelpCollapsed = !isHelpCollapsed;
-  }
+function toggleHelp() {
+	isHelpCollapsed = !isHelpCollapsed;
+}
 
-  async function testTelegramConnection() {
-    if (!telegramBotToken) return;
-    telegramTestStatus = "testing";
-    telegramErrorMessage = "";
-    const result =
-      await integrationsStore.testTelegramConnection(telegramBotToken);
-    if (result.ok) {
-      telegramTestStatus = "success";
-      if (result.bot?.username) {
-        telegramErrorMessage = `Bot @${result.bot.username} connecte`;
-      }
-    } else {
-      telegramTestStatus = "error";
-      telegramErrorMessage = result.error || "Erreur de connexion";
-    }
-    setTimeout(() => {
-      telegramTestStatus = "idle";
-      telegramErrorMessage = "";
-    }, 4000);
-  }
+async function testTelegramConnection() {
+	if (!telegramBotToken) return;
+	telegramTestStatus = "testing";
+	telegramErrorMessage = "";
+	const result =
+		await integrationsStore.testTelegramConnection(telegramBotToken);
+	if (result.ok) {
+		telegramTestStatus = "success";
+		if (result.bot?.username) {
+			telegramErrorMessage = `Bot @${result.bot.username} connecte`;
+		}
+	} else {
+		telegramTestStatus = "error";
+		telegramErrorMessage = result.error || "Erreur de connexion";
+	}
+	setTimeout(() => {
+		telegramTestStatus = "idle";
+		telegramErrorMessage = "";
+	}, 4000);
+}
 
-  async function sendTelegramTestMessage() {
-    if (!telegramBotToken || !telegramChatId) return;
-    telegramTestStatus = "testing";
-    telegramErrorMessage = "";
-    const result = await integrationsStore.sendTelegramTestMessage(
-      telegramBotToken,
-      telegramChatId
-    );
-    if (result.ok) {
-      telegramTestStatus = "success";
-      telegramErrorMessage = "Message envoye !";
-    } else {
-      telegramTestStatus = "error";
-      telegramErrorMessage = result.error || "Echec de l'envoi";
-    }
-    setTimeout(() => {
-      telegramTestStatus = "idle";
-      telegramErrorMessage = "";
-    }, 4000);
-  }
+async function sendTelegramTestMessage() {
+	if (!telegramBotToken || !telegramChatId) return;
+	telegramTestStatus = "testing";
+	telegramErrorMessage = "";
+	const result = await integrationsStore.sendTelegramTestMessage(
+		telegramBotToken,
+		telegramChatId,
+	);
+	if (result.ok) {
+		telegramTestStatus = "success";
+		telegramErrorMessage = "Message envoye !";
+	} else {
+		telegramTestStatus = "error";
+		telegramErrorMessage = result.error || "Echec de l'envoi";
+	}
+	setTimeout(() => {
+		telegramTestStatus = "idle";
+		telegramErrorMessage = "";
+	}, 4000);
+}
 
-  async function handleAddDocument() {
-    if (!kbText.trim()) return;
-    isIndexing = true;
-    try {
-      const ragService = RAGService.getInstance();
-      await ragService.addDocument(kbText);
-      kbText = "";
-      kbSuccess = true;
-      setTimeout(() => {
-        kbSuccess = false;
-      }, 3000);
-    } catch (e) {
-      console.error("Indexing failed", e);
-    } finally {
-      isIndexing = false;
-    }
-  }
+async function handleAddDocument() {
+	if (!kbText.trim()) return;
+	isIndexing = true;
+	try {
+		const ragService = RAGService.getInstance();
+		await ragService.addDocument(kbText);
+		kbText = "";
+		kbSuccess = true;
+		setTimeout(() => {
+			kbSuccess = false;
+		}, 3000);
+	} catch (e) {
+		console.error("Indexing failed", e);
+	} finally {
+		isIndexing = false;
+	}
+}
 </script>
 
 <div class="settings-container">
