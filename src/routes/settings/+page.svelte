@@ -1,270 +1,335 @@
 <script lang="ts">
-/**
- * Page des parametres
- */
+  /**
+   * Page des parametres
+   */
 
-import {
-	ArrowLeft,
-	Check,
-	ChevronRight,
-	Database,
-	FileText,
-	Heart,
-	Loader2,
-	Mic,
-	Moon,
-	Sun,
-	X,
-} from "lucide-svelte";
-import { onMount } from "svelte";
-import { slide } from "svelte/transition";
-import { enhance } from "$app/forms";
-import { goto } from "$app/navigation";
-import { RAGService } from "$lib/ai/rag";
-import { integrationsStore, settingsStore, themeStore } from "$lib/stores";
+  import {
+    ArrowLeft,
+    Check,
+    ChevronRight,
+    Database,
+    FileText,
+    Heart,
+    Loader2,
+    Mic,
+    Moon,
+    Sun,
+    X,
+  } from "lucide-svelte";
+  import { onMount } from "svelte";
+  import { slide } from "svelte/transition";
+  import { enhance } from "$app/forms";
+  import { goto } from "$app/navigation";
+  import { RAGService } from "$lib/ai/rag";
+  import { httpClient } from "$lib/infrastructure/http";
+  import { integrationsStore, settingsStore, themeStore } from "$lib/stores";
 
-let { data } = $props();
+  let { data } = $props();
 
-// Local state for form inputs
-let apiKey = $state("");
-let temperature = $state(0.7);
-let maxTokens = $state(1024);
-let codeTheme = $state("tokyo-night");
-let systemInstruction = $state("");
+  // Local state for form inputs
+  let apiKey = $state("");
+  let temperature = $state(0.7);
+  let maxTokens = $state(1024);
+  let codeTheme = $state("tokyo-night");
+  let systemInstruction = $state("");
 
-// Telegram Integration Locals
-let telegramEnabled = $state(false);
-let telegramBotToken = $state("");
-let telegramChatId = $state("");
-let telegramSendOnNewMessage = $state(true);
-let telegramSendOnError = $state(true);
-let telegramTestStatus = $state<"idle" | "testing" | "success" | "error">(
-	"idle",
-);
-let telegramErrorMessage = $state("");
+  // Telegram Integration Locals
+  let telegramEnabled = $state(false);
+  let telegramBotToken = $state("");
+  let telegramChatId = $state("");
+  let telegramSendOnNewMessage = $state(true);
+  let telegramSendOnError = $state(true);
+  let telegramTestStatus = $state<"idle" | "testing" | "success" | "error">(
+    "idle"
+  );
+  let telegramErrorMessage = $state("");
 
-// Knowledge Base Locals
-let kbText = $state("");
-let isIndexing = $state(false);
-let kbSuccess = $state(false);
+  // Knowledge Base Locals
+  let kbText = $state("");
+  let isIndexing = $state(false);
+  let kbSuccess = $state(false);
 
-// Help toggle
-let isHelpCollapsed = $state(true);
+  // Help toggle
+  let isHelpCollapsed = $state(true);
 
-// Server State to track dirty status
-let serverState = $state({
-	apiKey: "",
-	temperature: 0.7,
-	maxTokens: 1024,
-	codeTheme: "tokyo-night",
-	systemInstruction: "",
-	telegramEnabled: false,
-	telegramBotToken: "",
-	telegramChatId: "",
-	telegramSendOnNewMessage: true,
-	telegramSendOnError: true,
-});
+  // Loading states pour chaque section
+  let isSavingAppearance = $state(false);
+  let isSavingAi = $state(false);
+  let isSavingSystem = $state(false);
+  let isSavingIntegrations = $state(false);
 
-onMount(async () => {
-	// 1. Initialize Stores from Dexie
-	await integrationsStore.init();
-	await settingsStore.init();
+  // Server State to track dirty status
+  let serverState = $state({
+    apiKey: "",
+    temperature: 0.7,
+    maxTokens: 1024,
+    codeTheme: "tokyo-night",
+    systemInstruction: "",
+    telegramEnabled: false,
+    telegramBotToken: "",
+    telegramChatId: "",
+    telegramSendOnNewMessage: true,
+    telegramSendOnError: true,
+  });
 
-	// 2. Set Server State AND Local State from server data (data.settings)
-	// This ensures isDirty returns false on initial load
-	if (data.settings) {
-		const settings = data.settings;
-		
-		// Set local state from server data
-		apiKey = settings.apiKey || "";
-		temperature = settings.temperature ?? 0.7;
-		maxTokens = settings.maxTokens ?? 1024;
-		codeTheme = settings.codeTheme || "tokyo-night";
-		systemInstruction = settings.systemInstruction || "";
-		telegramEnabled = settings.telegramEnabled ?? false;
-		telegramBotToken = settings.telegramBotToken || "";
-		telegramChatId = settings.telegramChatId || "";
-		telegramSendOnNewMessage = settings.telegramSendOnNewMessage ?? true;
-		telegramSendOnError = settings.telegramSendOnError ?? true;
+  onMount(async () => {
+    // 1. Initialize Stores from Dexie
+    await integrationsStore.init();
+    await settingsStore.init();
 
-		// Set server state reference (same values)
-		serverState = {
-			apiKey: settings.apiKey || "",
-			temperature: settings.temperature ?? 0.7,
-			maxTokens: settings.maxTokens ?? 1024,
-			codeTheme: settings.codeTheme || "tokyo-night",
-			systemInstruction: settings.systemInstruction || "",
-			telegramEnabled: settings.telegramEnabled ?? false,
-			telegramBotToken: settings.telegramBotToken || "",
-			telegramChatId: settings.telegramChatId || "",
-			telegramSendOnNewMessage: settings.telegramSendOnNewMessage ?? true,
-			telegramSendOnError: settings.telegramSendOnError ?? true,
-		};
-	}
-});
+    // 2. Set Server State AND Local State from server data (data.settings)
+    // This ensures isDirty returns false on initial load
+    if (data.settings) {
+      const settings = data.settings;
 
-function isDirty(section: string) {
-	if (section === "appearance") {
-		return codeTheme !== serverState.codeTheme; // Theme light/dark is local only via themeStore typically? Or we added it? codeTheme is in DB.
-	}
-	if (section === "ai") {
-		return (
-			apiKey !== serverState.apiKey ||
-			temperature !== serverState.temperature ||
-			maxTokens !== serverState.maxTokens
-		);
-	}
-	if (section === "system") {
-		return systemInstruction !== serverState.systemInstruction;
-	}
-	if (section === "integrations") {
-		return (
-			telegramEnabled !== serverState.telegramEnabled ||
-			telegramBotToken !== serverState.telegramBotToken ||
-			telegramChatId !== serverState.telegramChatId ||
-			telegramSendOnNewMessage !== serverState.telegramSendOnNewMessage ||
-			telegramSendOnError !== serverState.telegramSendOnError
-		);
-	}
-	return false;
-}
+      // Set local state from server data
+      apiKey = settings.apiKey || "";
+      temperature = settings.temperature ?? 0.7;
+      maxTokens = settings.maxTokens ?? 1024;
+      codeTheme = settings.codeTheme || "tokyo-night";
+      systemInstruction = settings.systemInstruction || "";
+      telegramEnabled = settings.telegramEnabled ?? false;
+      telegramBotToken = settings.telegramBotToken || "";
+      telegramChatId = settings.telegramChatId || "";
+      telegramSendOnNewMessage = settings.telegramSendOnNewMessage ?? true;
+      telegramSendOnError = settings.telegramSendOnError ?? true;
 
-import type { ActionResult } from "@sveltejs/kit";
+      // Set server state reference (same values)
+      serverState = {
+        apiKey: settings.apiKey || "",
+        temperature: settings.temperature ?? 0.7,
+        maxTokens: settings.maxTokens ?? 1024,
+        codeTheme: settings.codeTheme || "tokyo-night",
+        systemInstruction: settings.systemInstruction || "",
+        telegramEnabled: settings.telegramEnabled ?? false,
+        telegramBotToken: settings.telegramBotToken || "",
+        telegramChatId: settings.telegramChatId || "",
+        telegramSendOnNewMessage: settings.telegramSendOnNewMessage ?? true,
+        telegramSendOnError: settings.telegramSendOnError ?? true,
+      };
+    }
+  });
 
-const handleSubmit = ({ formData }: { formData: FormData }) => {
-	const section = formData.get("section") as string;
+  function isDirty(section: string) {
+    if (section === "appearance") {
+      return codeTheme !== serverState.codeTheme; // Theme light/dark is local only via themeStore typically? Or we added it? codeTheme is in DB.
+    }
+    if (section === "ai") {
+      return (
+        apiKey !== serverState.apiKey ||
+        temperature !== serverState.temperature ||
+        maxTokens !== serverState.maxTokens
+      );
+    }
+    if (section === "system") {
+      return systemInstruction !== serverState.systemInstruction;
+    }
+    if (section === "integrations") {
+      return (
+        telegramEnabled !== serverState.telegramEnabled ||
+        telegramBotToken !== serverState.telegramBotToken ||
+        telegramChatId !== serverState.telegramChatId ||
+        telegramSendOnNewMessage !== serverState.telegramSendOnNewMessage ||
+        telegramSendOnError !== serverState.telegramSendOnError
+      );
+    }
+    return false;
+  }
 
-	// Populate FormData manually since inputs might lack name attributes
-	if (section === "appearance") {
-		formData.set("codeTheme", codeTheme);
-		settingsStore.setCodeTheme(codeTheme);
-	} else if (section === "ai") {
-		formData.set("apiKey", apiKey);
-		formData.set("temperature", temperature.toString());
-		formData.set("maxTokens", maxTokens.toString());
-		settingsStore.setApiKey(apiKey);
-		settingsStore.setTemperature(temperature);
-		settingsStore.setMaxTokens(maxTokens);
-	} else if (section === "system") {
-		formData.set("systemInstruction", systemInstruction);
-		settingsStore.setSystemInstruction(systemInstruction);
-	} else if (section === "integrations") {
-		formData.set("telegramEnabled", String(telegramEnabled));
-		formData.set("telegramBotToken", telegramBotToken);
-		formData.set("telegramChatId", telegramChatId);
-		formData.set("telegramSendOnNewMessage", String(telegramSendOnNewMessage));
-		formData.set("telegramSendOnError", String(telegramSendOnError));
+  import type { ActionResult } from "@sveltejs/kit";
 
-		integrationsStore.setTelegramConfig({
-			enabled: telegramEnabled,
-			botToken: telegramBotToken,
-			chatId: telegramChatId,
-			sendOnNewMessage: telegramSendOnNewMessage,
-			sendOnError: telegramSendOnError,
-		});
-		integrationsStore.toggleTelegram(telegramEnabled);
-	}
+  /**
+   * Déclenche la synchronisation des paramètres vers Supabase via Inngest
+   */
+  async function triggerSettingsSync(section: string) {
+    const payload: Record<string, unknown> = { section };
 
-	return async ({
-		result,
-		update,
-	}: {
-		result: ActionResult;
-		update: () => Promise<void>;
-	}) => {
-		if (result.type === "success") {
-			// Update Server State Reference to reflect successful save
-			if (section === "appearance") {
-				serverState.codeTheme = codeTheme;
-			} else if (section === "ai") {
-				serverState.apiKey = apiKey;
-				serverState.temperature = temperature;
-				serverState.maxTokens = maxTokens;
-			} else if (section === "system") {
-				serverState.systemInstruction = systemInstruction;
-			} else if (section === "integrations") {
-				serverState.telegramEnabled = telegramEnabled;
-				serverState.telegramBotToken = telegramBotToken;
-				serverState.telegramChatId = telegramChatId;
-				serverState.telegramSendOnNewMessage = telegramSendOnNewMessage;
-				serverState.telegramSendOnError = telegramSendOnError;
-			}
-		}
-		await update();
-	};
-};
+    if (section === "appearance") {
+      payload.codeTheme = codeTheme;
+    } else if (section === "ai") {
+      payload.apiKey = apiKey;
+      payload.temperature = temperature;
+      payload.maxTokens = maxTokens;
+    } else if (section === "system") {
+      payload.systemInstruction = systemInstruction;
+    } else if (section === "integrations") {
+      payload.telegramEnabled = telegramEnabled;
+      payload.telegramBotToken = telegramBotToken;
+      payload.telegramChatId = telegramChatId;
+      payload.telegramSendOnNewMessage = telegramSendOnNewMessage;
+      payload.telegramSendOnError = telegramSendOnError;
+    }
 
-// ... Helper functions for UI interactions (telegram tests, help toggle) ...
+    try {
+      await httpClient.post("/api/sync/settings", payload);
+    } catch (error) {
+      console.error("Erreur lors de la synchronisation des paramètres:", error);
+    }
+  }
 
-function handleTelegramToggle() {
-	telegramEnabled = !telegramEnabled;
-	// Don't save immediately to store, wait for Save button.
-	// integrationsStore.toggleTelegram(telegramEnabled); <--- Removed auto-save
-}
+  const handleSubmit = ({ formData }: { formData: FormData }) => {
+    const section = formData.get("section") as string;
 
-function toggleHelp() {
-	isHelpCollapsed = !isHelpCollapsed;
-}
+    // Activer le loading pour la section concernée
+    if (section === "appearance") {
+      isSavingAppearance = true;
+    } else if (section === "ai") {
+      isSavingAi = true;
+    } else if (section === "system") {
+      isSavingSystem = true;
+    } else if (section === "integrations") {
+      isSavingIntegrations = true;
+    }
 
-async function testTelegramConnection() {
-	if (!telegramBotToken) return;
-	telegramTestStatus = "testing";
-	telegramErrorMessage = "";
-	const result =
-		await integrationsStore.testTelegramConnection(telegramBotToken);
-	if (result.ok) {
-		telegramTestStatus = "success";
-		if (result.bot?.username) {
-			telegramErrorMessage = `Bot @${result.bot.username} connecte`;
-		}
-	} else {
-		telegramTestStatus = "error";
-		telegramErrorMessage = result.error || "Erreur de connexion";
-	}
-	setTimeout(() => {
-		telegramTestStatus = "idle";
-		telegramErrorMessage = "";
-	}, 4000);
-}
+    // 1. Sauvegarde locale dans DexieJS via les stores
+    if (section === "appearance") {
+      formData.set("codeTheme", codeTheme);
+      settingsStore.setCodeTheme(codeTheme);
+    } else if (section === "ai") {
+      formData.set("apiKey", apiKey);
+      formData.set("temperature", temperature.toString());
+      formData.set("maxTokens", maxTokens.toString());
+      settingsStore.setApiKey(apiKey);
+      settingsStore.setTemperature(temperature);
+      settingsStore.setMaxTokens(maxTokens);
+    } else if (section === "system") {
+      formData.set("systemInstruction", systemInstruction);
+      settingsStore.setSystemInstruction(systemInstruction);
+    } else if (section === "integrations") {
+      formData.set("telegramEnabled", String(telegramEnabled));
+      formData.set("telegramBotToken", telegramBotToken);
+      formData.set("telegramChatId", telegramChatId);
+      formData.set(
+        "telegramSendOnNewMessage",
+        String(telegramSendOnNewMessage)
+      );
+      formData.set("telegramSendOnError", String(telegramSendOnError));
 
-async function sendTelegramTestMessage() {
-	if (!telegramBotToken || !telegramChatId) return;
-	telegramTestStatus = "testing";
-	telegramErrorMessage = "";
-	const result = await integrationsStore.sendTelegramTestMessage(
-		telegramBotToken,
-		telegramChatId,
-	);
-	if (result.ok) {
-		telegramTestStatus = "success";
-		telegramErrorMessage = "Message envoye !";
-	} else {
-		telegramTestStatus = "error";
-		telegramErrorMessage = result.error || "Echec de l'envoi";
-	}
-	setTimeout(() => {
-		telegramTestStatus = "idle";
-		telegramErrorMessage = "";
-	}, 4000);
-}
+      integrationsStore.setTelegramConfig({
+        enabled: telegramEnabled,
+        botToken: telegramBotToken,
+        chatId: telegramChatId,
+        sendOnNewMessage: telegramSendOnNewMessage,
+        sendOnError: telegramSendOnError,
+      });
+      integrationsStore.toggleTelegram(telegramEnabled);
+    }
 
-async function handleAddDocument() {
-	if (!kbText.trim()) return;
-	isIndexing = true;
-	try {
-		const ragService = RAGService.getInstance();
-		await ragService.addDocument(kbText);
-		kbText = "";
-		kbSuccess = true;
-		setTimeout(() => {
-			kbSuccess = false;
-		}, 3000);
-	} catch (e) {
-		console.error("Indexing failed", e);
-	} finally {
-		isIndexing = false;
-	}
-}
+    return async ({
+      result,
+      update,
+    }: {
+      result: ActionResult;
+      update: () => Promise<void>;
+    }) => {
+      if (result.type === "success") {
+        // 2. Déclencher la synchronisation async vers Supabase via Inngest
+        triggerSettingsSync(section);
+
+        // 3. Mettre à jour le serverState pour refléter la sauvegarde
+        if (section === "appearance") {
+          serverState.codeTheme = codeTheme;
+        } else if (section === "ai") {
+          serverState.apiKey = apiKey;
+          serverState.temperature = temperature;
+          serverState.maxTokens = maxTokens;
+        } else if (section === "system") {
+          serverState.systemInstruction = systemInstruction;
+        } else if (section === "integrations") {
+          serverState.telegramEnabled = telegramEnabled;
+          serverState.telegramBotToken = telegramBotToken;
+          serverState.telegramChatId = telegramChatId;
+          serverState.telegramSendOnNewMessage = telegramSendOnNewMessage;
+          serverState.telegramSendOnError = telegramSendOnError;
+        }
+      }
+
+      // Désactiver le loading pour la section concernée
+      if (section === "appearance") {
+        isSavingAppearance = false;
+      } else if (section === "ai") {
+        isSavingAi = false;
+      } else if (section === "system") {
+        isSavingSystem = false;
+      } else if (section === "integrations") {
+        isSavingIntegrations = false;
+      }
+
+      await update();
+    };
+  };
+
+  // ... Helper functions for UI interactions (telegram tests, help toggle) ...
+
+  function handleTelegramToggle() {
+    telegramEnabled = !telegramEnabled;
+    // Don't save immediately to store, wait for Save button.
+    // integrationsStore.toggleTelegram(telegramEnabled); <--- Removed auto-save
+  }
+
+  function toggleHelp() {
+    isHelpCollapsed = !isHelpCollapsed;
+  }
+
+  async function testTelegramConnection() {
+    if (!telegramBotToken) return;
+    telegramTestStatus = "testing";
+    telegramErrorMessage = "";
+    const result =
+      await integrationsStore.testTelegramConnection(telegramBotToken);
+    if (result.ok) {
+      telegramTestStatus = "success";
+      if (result.bot?.username) {
+        telegramErrorMessage = `Bot @${result.bot.username} connecte`;
+      }
+    } else {
+      telegramTestStatus = "error";
+      telegramErrorMessage = result.error || "Erreur de connexion";
+    }
+    setTimeout(() => {
+      telegramTestStatus = "idle";
+      telegramErrorMessage = "";
+    }, 4000);
+  }
+
+  async function sendTelegramTestMessage() {
+    if (!telegramBotToken || !telegramChatId) return;
+    telegramTestStatus = "testing";
+    telegramErrorMessage = "";
+    const result = await integrationsStore.sendTelegramTestMessage(
+      telegramBotToken,
+      telegramChatId
+    );
+    if (result.ok) {
+      telegramTestStatus = "success";
+      telegramErrorMessage = "Message envoye !";
+    } else {
+      telegramTestStatus = "error";
+      telegramErrorMessage = result.error || "Echec de l'envoi";
+    }
+    setTimeout(() => {
+      telegramTestStatus = "idle";
+      telegramErrorMessage = "";
+    }, 4000);
+  }
+
+  async function handleAddDocument() {
+    if (!kbText.trim()) return;
+    isIndexing = true;
+    try {
+      const ragService = RAGService.getInstance();
+      await ragService.addDocument(kbText);
+      kbText = "";
+      kbSuccess = true;
+      setTimeout(() => {
+        kbSuccess = false;
+      }, 3000);
+    } catch (e) {
+      console.error("Indexing failed", e);
+    } finally {
+      isIndexing = false;
+    }
+  }
 </script>
 
 <div class="settings-container">
@@ -306,7 +371,10 @@ async function handleAddDocument() {
             </div>
             <button
               class="theme-toggle"
-              onclick={(e) => { e.preventDefault(); themeStore.toggle(); }}
+              onclick={(e) => {
+                e.preventDefault();
+                themeStore.toggle();
+              }}
             >
               {#if $themeStore.isDark}
                 <Moon size={16} class="theme-icon" />
@@ -331,8 +399,15 @@ async function handleAddDocument() {
           </div>
 
           <div class="card-footer">
-            <button class="save-btn-small" disabled={!isDirty('appearance')}>
-               Enregistrer
+            <button
+              class="save-btn-small"
+              disabled={!isDirty("appearance") || isSavingAppearance}
+            >
+              {#if isSavingAppearance}
+                <Loader2 size={16} class="animate-spin" />
+              {:else}
+                Enregistrer
+              {/if}
             </button>
           </div>
         </div>
@@ -418,8 +493,15 @@ async function handleAddDocument() {
           </div>
 
           <div class="card-footer">
-            <button class="save-btn-small" disabled={!isDirty('ai')}>
-               Enregistrer
+            <button
+              class="save-btn-small"
+              disabled={!isDirty("ai") || isSavingAi}
+            >
+              {#if isSavingAi}
+                <Loader2 size={16} class="animate-spin" />
+              {:else}
+                Enregistrer
+              {/if}
             </button>
           </div>
         </div>
@@ -463,10 +545,17 @@ async function handleAddDocument() {
               </div>
             </div>
           </div>
-          
+
           <div class="card-footer">
-            <button class="save-btn-small" disabled={!isDirty('system')}>
-               Enregistrer
+            <button
+              class="save-btn-small"
+              disabled={!isDirty("system") || isSavingSystem}
+            >
+              {#if isSavingSystem}
+                <Loader2 size={16} class="animate-spin" />
+              {:else}
+                Enregistrer
+              {/if}
             </button>
           </div>
         </div>
@@ -508,7 +597,7 @@ async function handleAddDocument() {
                 disabled={isIndexing || !kbText}
               >
                 {#if isIndexing}
-                  <Loader2 size={16} class="spin" /> Indexation...
+                  <Loader2 size={16} class="animate-spin" /> Indexation...
                 {:else if kbSuccess}
                   <Check size={16} /> Ajouté !
                 {:else}
@@ -596,7 +685,10 @@ async function handleAddDocument() {
                     <div class="button-group">
                       <button
                         class="test-btn"
-                        onclick={(e) => { e.preventDefault(); testTelegramConnection(); }}
+                        onclick={(e) => {
+                          e.preventDefault();
+                          testTelegramConnection();
+                        }}
                         disabled={!telegramBotToken ||
                           telegramTestStatus === "testing"}
                       >
@@ -631,7 +723,10 @@ async function handleAddDocument() {
                     <div class="button-group">
                       <button
                         class="test-btn"
-                        onclick={(e) => { e.preventDefault(); sendTelegramTestMessage(); }}
+                        onclick={(e) => {
+                          e.preventDefault();
+                          sendTelegramTestMessage();
+                        }}
                         disabled={!telegramBotToken ||
                           !telegramChatId ||
                           telegramTestStatus === "testing"}
@@ -676,7 +771,10 @@ async function handleAddDocument() {
                       <span>Nouveaux messages</span>
                     </label>
                     <label class="checkbox-item">
-                      <input type="checkbox" bind:checked={telegramSendOnError} />
+                      <input
+                        type="checkbox"
+                        bind:checked={telegramSendOnError}
+                      />
                       <span>Erreurs système</span>
                     </label>
                   </div>
@@ -759,7 +857,8 @@ async function handleAddDocument() {
                         <div class="help-note">
                           <strong>Note :</strong>
                           Les Chat ID personnels sont positifs (ex:
-                          <code>123456789</code>), les groupes sont négatifs (ex:
+                          <code>123456789</code>), les groupes sont négatifs
+                          (ex:
                           <code>-1001234567890</code>)
                         </div>
                       </div>
@@ -773,16 +872,18 @@ async function handleAddDocument() {
           <div class="card-footer">
             <button
               class="save-btn-small"
-              disabled={!isDirty('integrations')}
+              disabled={!isDirty("integrations") || isSavingIntegrations}
             >
-               Enregistrer
+              {#if isSavingIntegrations}
+                <Loader2 size={16} class="animate-spin" />
+              {:else}
+                Enregistrer
+              {/if}
             </button>
           </div>
         </div>
       </section>
     </form>
-
-
   </div>
 </div>
 
@@ -1113,8 +1214,6 @@ async function handleAddDocument() {
     font-weight: 600;
     letter-spacing: 0.5px;
   }
-
-
 
   /* Styles pour les intégrations */
   .integration-item {
