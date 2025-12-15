@@ -70,35 +70,35 @@ onMount(async () => {
 	await integrationsStore.init();
 	await settingsStore.init();
 
-	// 2. Set Local State from Stores (Dexie)
-	apiKey = $settingsStore.apiKey;
-	temperature = $settingsStore.temperature;
-	maxTokens = $settingsStore.maxTokens;
-	codeTheme = $settingsStore.codeTheme;
-	systemInstruction = $settingsStore.systemInstruction;
-
-	const integrations = $integrationsStore;
-	telegramEnabled = integrations.telegram.enabled;
-	telegramBotToken = integrations.telegram.botToken;
-	telegramChatId = integrations.telegram.chatId;
-	telegramSendOnNewMessage = integrations.telegram.sendOnNewMessage;
-	telegramSendOnError = integrations.telegram.sendOnError;
-
-	// 3. Set Server State reference from Props of correct data
+	// 2. Set Server State AND Local State from server data (data.settings)
+	// This ensures isDirty returns false on initial load
 	if (data.settings) {
+		const settings = data.settings;
+		
+		// Set local state from server data
+		apiKey = settings.apiKey || "";
+		temperature = settings.temperature ?? 0.7;
+		maxTokens = settings.maxTokens ?? 1024;
+		codeTheme = settings.codeTheme || "tokyo-night";
+		systemInstruction = settings.systemInstruction || "";
+		telegramEnabled = settings.telegramEnabled ?? false;
+		telegramBotToken = settings.telegramBotToken || "";
+		telegramChatId = settings.telegramChatId || "";
+		telegramSendOnNewMessage = settings.telegramSendOnNewMessage ?? true;
+		telegramSendOnError = settings.telegramSendOnError ?? true;
+
+		// Set server state reference (same values)
 		serverState = {
-			apiKey: data.settings.apiKey || "",
-			// Use server data if valid, else default.
-			// Note: If server has 0.7 and dexie has 0.8, isDirty should be true.
-			temperature: data.settings.temperature ?? 0.7,
-			maxTokens: data.settings.maxTokens ?? 1024,
-			codeTheme: data.settings.codeTheme || "tokyo-night",
-			systemInstruction: data.settings.systemInstruction || "",
-			telegramEnabled: data.settings.telegramEnabled ?? false,
-			telegramBotToken: data.settings.telegramBotToken || "",
-			telegramChatId: data.settings.telegramChatId || "",
-			telegramSendOnNewMessage: data.settings.telegramSendOnNewMessage ?? true,
-			telegramSendOnError: data.settings.telegramSendOnError ?? true,
+			apiKey: settings.apiKey || "",
+			temperature: settings.temperature ?? 0.7,
+			maxTokens: settings.maxTokens ?? 1024,
+			codeTheme: settings.codeTheme || "tokyo-night",
+			systemInstruction: settings.systemInstruction || "",
+			telegramEnabled: settings.telegramEnabled ?? false,
+			telegramBotToken: settings.telegramBotToken || "",
+			telegramChatId: settings.telegramChatId || "",
+			telegramSendOnNewMessage: settings.telegramSendOnNewMessage ?? true,
+			telegramSendOnError: settings.telegramSendOnError ?? true,
 		};
 	}
 });
@@ -766,17 +766,17 @@ async function handleAddDocument() {
                     </div>
                   {/if}
                 </div>
-
-                <div class="integration-actions">
-                  <button
-                    class="save-btn-small"
-                    disabled={!isDirty('integrations')}
-                  >
-                     Enregistrer
-                  </button>
-                </div>
               </div>
             {/if}
+          </div>
+
+          <div class="card-footer">
+            <button
+              class="save-btn-small"
+              disabled={!isDirty('integrations')}
+            >
+               Enregistrer
+            </button>
           </div>
         </div>
       </section>
@@ -1276,8 +1276,9 @@ async function handleAddDocument() {
   }
 
   .save-btn-small:disabled {
-    background: #10b981;
-    cursor: default;
+    background: #9ca3af;
+    opacity: 0.7;
+    cursor: not-allowed;
   }
 
   .integration-help {
