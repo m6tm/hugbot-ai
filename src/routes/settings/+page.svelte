@@ -167,66 +167,48 @@
     }
   }
 
-  const handleSubmit = ({ formData }: { formData: FormData }) => {
+  const handleSubmit = ({
+    formData,
+    cancel,
+  }: {
+    formData: FormData;
+    cancel: () => void;
+  }) => {
     const section = formData.get("section") as string;
+    cancel(); // Annuler la soumission native au serveur pour éviter le rechargement/reset
 
-    // Activer le loading pour la section concernée
-    if (section === "appearance") {
-      isSavingAppearance = true;
-    } else if (section === "ai") {
-      isSavingAi = true;
-    } else if (section === "system") {
-      isSavingSystem = true;
-    } else if (section === "integrations") {
-      isSavingIntegrations = true;
-    }
+    const runSave = async () => {
+      // Activer le loading
+      if (section === "appearance") isSavingAppearance = true;
+      else if (section === "ai") isSavingAi = true;
+      else if (section === "system") isSavingSystem = true;
+      else if (section === "integrations") isSavingIntegrations = true;
 
-    // 1. Sauvegarde locale dans DexieJS via les stores
-    if (section === "appearance") {
-      formData.set("codeTheme", codeTheme);
-      settingsStore.setCodeTheme(codeTheme);
-    } else if (section === "ai") {
-      formData.set("apiKey", apiKey);
-      formData.set("temperature", temperature.toString());
-      formData.set("maxTokens", maxTokens.toString());
-      settingsStore.setApiKey(apiKey);
-      settingsStore.setTemperature(temperature);
-      settingsStore.setMaxTokens(maxTokens);
-    } else if (section === "system") {
-      formData.set("systemInstruction", systemInstruction);
-      settingsStore.setSystemInstruction(systemInstruction);
-    } else if (section === "integrations") {
-      formData.set("telegramEnabled", String(telegramEnabled));
-      formData.set("telegramBotToken", telegramBotToken);
-      formData.set("telegramChatId", telegramChatId);
-      formData.set(
-        "telegramSendOnNewMessage",
-        String(telegramSendOnNewMessage)
-      );
-      formData.set("telegramSendOnError", String(telegramSendOnError));
+      try {
+        // 1. Sauvegarde locale dans DexieJS via les stores
+        if (section === "appearance") {
+          settingsStore.setCodeTheme(codeTheme);
+        } else if (section === "ai") {
+          settingsStore.setApiKey(apiKey);
+          settingsStore.setTemperature(temperature);
+          settingsStore.setMaxTokens(maxTokens);
+        } else if (section === "system") {
+          settingsStore.setSystemInstruction(systemInstruction);
+        } else if (section === "integrations") {
+          integrationsStore.setTelegramConfig({
+            enabled: telegramEnabled,
+            botToken: telegramBotToken,
+            chatId: telegramChatId,
+            sendOnNewMessage: telegramSendOnNewMessage,
+            sendOnError: telegramSendOnError,
+          });
+          integrationsStore.toggleTelegram(telegramEnabled);
+        }
 
-      integrationsStore.setTelegramConfig({
-        enabled: telegramEnabled,
-        botToken: telegramBotToken,
-        chatId: telegramChatId,
-        sendOnNewMessage: telegramSendOnNewMessage,
-        sendOnError: telegramSendOnError,
-      });
-      integrationsStore.toggleTelegram(telegramEnabled);
-    }
-
-    return async ({
-      result,
-      update,
-    }: {
-      result: ActionResult;
-      update: () => Promise<void>;
-    }) => {
-      if (result.type === "success") {
         // 2. Déclencher la synchronisation async vers Supabase via Inngest
-        triggerSettingsSync(section);
+        await triggerSettingsSync(section);
 
-        // 3. Mettre à jour le serverState pour refléter la sauvegarde
+        // 3. Mettre à jour le serverState pour refléter la sauvegarde (Optimistic UI)
         if (section === "appearance") {
           serverState.codeTheme = codeTheme;
         } else if (section === "ai") {
@@ -242,21 +224,18 @@
           serverState.telegramSendOnNewMessage = telegramSendOnNewMessage;
           serverState.telegramSendOnError = telegramSendOnError;
         }
+      } catch (error) {
+        console.error("Erreur lors de la sauvegarde:", error);
+      } finally {
+        // Désactiver le loading
+        if (section === "appearance") isSavingAppearance = false;
+        else if (section === "ai") isSavingAi = false;
+        else if (section === "system") isSavingSystem = false;
+        else if (section === "integrations") isSavingIntegrations = false;
       }
-
-      // Désactiver le loading pour la section concernée
-      if (section === "appearance") {
-        isSavingAppearance = false;
-      } else if (section === "ai") {
-        isSavingAi = false;
-      } else if (section === "system") {
-        isSavingSystem = false;
-      } else if (section === "integrations") {
-        isSavingIntegrations = false;
-      }
-
-      await update();
     };
+
+    runSave();
   };
 
   // ... Helper functions for UI interactions (telegram tests, help toggle) ...
@@ -1347,14 +1326,6 @@
     width: 16px;
     height: 16px;
     accent-color: #9333ea;
-  }
-
-  .integration-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border-color);
   }
 
   .save-btn-small {
