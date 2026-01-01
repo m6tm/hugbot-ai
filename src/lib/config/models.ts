@@ -5,7 +5,7 @@
 export interface AIModel {
 	id: string;
 	name: string;
-	provider: "huggingface" | "openai" | "mock";
+	provider: "huggingface" | "openai" | "gemini" | "claude" | "mock";
 	modelId: string;
 	description: string;
 	maxTokens: number;
@@ -69,6 +69,46 @@ export const availableModels: AIModel[] = [
 		provider: "huggingface",
 		modelId: "google/gemma-2-27b-it",
 		description: "Modele Google open source",
+		maxTokens: 4096,
+	},
+	{
+		id: "gpt-4o",
+		name: "GPT-4o",
+		provider: "openai",
+		modelId: "gpt-4o",
+		description: "Le modele le plus intelligent d'OpenAI",
+		maxTokens: 4096,
+	},
+	{
+		id: "gpt-4o-mini",
+		name: "GPT-4o Mini",
+		provider: "openai",
+		modelId: "gpt-4o-mini",
+		description: "Modele OpenAI rapide et economique",
+		maxTokens: 4096,
+	},
+	{
+		id: "gemini-2.0-flash",
+		name: "Gemini 2.0 Flash",
+		provider: "gemini",
+		modelId: "gemini-2.0-flash",
+		description: "Modele Google ultra-rapide",
+		maxTokens: 4096,
+	},
+	{
+		id: "gemini-1.5-pro",
+		name: "Gemini 1.5 Pro",
+		provider: "gemini",
+		modelId: "gemini-1.5-pro",
+		description: "Modele Google tres performant",
+		maxTokens: 8192,
+	},
+	{
+		id: "claude-3-5-sonnet",
+		name: "Claude 3.5 Sonnet",
+		provider: "claude",
+		modelId: "claude-3.5-sonnet-latest",
+		description: "Le modele le plus capable d'Anthropic",
 		maxTokens: 4096,
 	},
 ];

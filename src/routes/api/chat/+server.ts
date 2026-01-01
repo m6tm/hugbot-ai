@@ -10,12 +10,12 @@
  */
 
 import { OpenAI } from "openai";
-import { env } from "$env/dynamic/private";
 import { DEFAULT_SYSTEM_INSTRUCTION } from "$lib/config/default-system-prompt";
 import {
 	canGuestSendMessage,
 	incrementGuestMessageCount,
 } from "$lib/infrastructure/services/guestLimit.service";
+import { getAIConfig } from "$lib/server/ai";
 import { decrypt } from "$lib/server/crypto";
 import prisma, { db } from "$lib/server/db";
 import type { RequestHandler } from "./$types";
@@ -179,10 +179,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			});
 		}
 
-		// Recuperation de la cle API
-		let effectiveApiKey = apiKey;
-
-		if (user && !effectiveApiKey) {
+		// Recuperation de la cle API utilisateur si presente
+		let userApiKey = apiKey;
+		if (user && !userApiKey) {
 			const setting = await db.setting.findUnique({
 				where: { userId: user.id },
 				select: { apiKey: true },
@@ -190,22 +189,21 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 			if (setting?.apiKey) {
 				try {
-					effectiveApiKey = decrypt(setting.apiKey);
+					userApiKey = decrypt(setting.apiKey);
 				} catch (e) {
 					console.error("Failed to decrypt user key", e);
 				}
 			}
 		}
 
-		if (!effectiveApiKey) {
-			effectiveApiKey = env.HUGGINGFACE_API_KEY;
-		}
+		// Récupération de la configuration AI via l'utilitaire centralisé
+		const aiConfig = getAIConfig(modelId, userApiKey);
 
-		if (!effectiveApiKey) {
+		if (!aiConfig.apiKey) {
 			return new Response(
 				JSON.stringify({
 					error:
-						"Aucune cle API configuree. Veuillez configurer votre cle dans les parametres.",
+						"Aucune cle API configuree pour ce fournisseur. Veuillez configurer votre cle dans les parametres ou contacter l'administrateur.",
 				}),
 				{
 					status: 401,
@@ -258,8 +256,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		});
 
 		const client = new OpenAI({
-			baseURL: "https://router.huggingface.co/v1",
-			apiKey: effectiveApiKey,
+			baseURL: aiConfig.baseURL || undefined,
+			apiKey: aiConfig.apiKey,
 		});
 
 		// Mode streaming avec SSE

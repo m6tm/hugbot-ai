@@ -6,8 +6,8 @@
  */
 
 import { OpenAI } from "openai";
-import { env } from "$env/dynamic/private";
 import { availableModels, getDefaultModel } from "$lib/config/models";
+import { getAIConfig } from "$lib/server/ai";
 import type { RequestHandler } from "./$types";
 
 interface OpenAIMessage {
@@ -55,16 +55,6 @@ function generateId(): string {
 	return `chatcmpl-${Math.random().toString(36).substring(2, 15)}`;
 }
 
-function resolveModel(modelInput: string): string {
-	const model = availableModels.find(
-		(m) => m.id === modelInput || m.modelId === modelInput,
-	);
-	if (model) {
-		return model.modelId;
-	}
-	return modelInput;
-}
-
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const body: OpenAIChatRequest = await request.json();
@@ -84,15 +74,23 @@ export const POST: RequestHandler = async ({ request }) => {
 			apiKey = authHeader.slice(7);
 		}
 
-		// Si pas de cle dans le header, utilise celle du serveur
-		const effectiveApiKey = apiKey || env.HUGGINGFACE_API_KEY;
+		// Si pas de cle dans le header, on utilisera les clés du serveur via getAIConfig
 
-		if (!effectiveApiKey) {
+		// Resoudre le modele
+		const modelId = model || getDefaultModel().id;
+		const modelInfo = availableModels.find(
+			(m) => m.id === modelId || m.modelId === modelId,
+		);
+		const resolvedModel = modelInfo?.modelId || modelId;
+
+		// Récupération de la configuration AI via l'utilitaire centralisé
+		const aiConfig = getAIConfig(modelInfo?.id || model, apiKey);
+
+		if (!aiConfig.apiKey) {
 			return new Response(
 				JSON.stringify({
 					error: {
-						message:
-							"API key required. Set Authorization header with Bearer token.",
+						message: "API key required or provider not configured.",
 						type: "invalid_request_error",
 						code: "missing_api_key",
 					},
@@ -104,12 +102,9 @@ export const POST: RequestHandler = async ({ request }) => {
 			);
 		}
 
-		// Resoudre le modele (accepte l'id court ou le modelId complet)
-		const resolvedModel = resolveModel(model || getDefaultModel().modelId);
-
 		const client = new OpenAI({
-			baseURL: "https://router.huggingface.co/v1",
-			apiKey: effectiveApiKey,
+			baseURL: aiConfig.baseURL || undefined,
+			apiKey: aiConfig.apiKey,
 		});
 
 		const formattedMessages = messages.map((m) => ({
