@@ -164,13 +164,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const {
 			message,
 			modelId,
-			temperature = 0.7,
-			maxTokens = 1024,
 			apiKey,
 			stream = false,
 			conversationId,
 			systemInstruction,
 		} = body;
+
+		const temperature = body.temperature ?? 0.7;
+		const maxTokens = body.maxTokens ?? 1024;
 
 		if (!message?.trim()) {
 			return new Response(JSON.stringify({ error: "Message vide" }), {
@@ -263,7 +264,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		// Mode streaming avec SSE
 		if (stream) {
 			const streamResponse = await client.chat.completions.create({
-				model: modelId,
+				model: aiConfig.actualModelId,
 				messages: messagesForAI,
 				max_tokens: maxTokens,
 				temperature: temperature,
@@ -323,7 +324,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 		// Mode non-streaming
 		const chatCompletion = await client.chat.completions.create({
-			model: modelId,
+			model: aiConfig.actualModelId,
 			messages: messagesForAI,
 			max_tokens: maxTokens,
 			temperature: temperature,

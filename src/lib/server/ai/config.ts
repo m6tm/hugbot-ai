@@ -1,5 +1,5 @@
 import { env } from "$env/dynamic/private";
-import { getModelById } from "$lib/config/models";
+import { availableModels, getModelById } from "$lib/config/models";
 
 /**
  * Configuration de l'IA calculée dynamiquement
@@ -8,6 +8,7 @@ export interface AIConfig {
 	apiKey: string;
 	baseURL: string;
 	provider: string;
+	actualModelId: string;
 }
 
 /**
@@ -19,7 +20,13 @@ export interface AIConfig {
  * @returns La configuration de l'IA
  */
 export function getAIConfig(modelId: string, userApiKey?: string): AIConfig {
-	const model = getModelById(modelId);
+	let model = getModelById(modelId);
+
+	// Si le modèle n'existe pas, on prend le modèle par défaut pour éviter les erreurs d'API
+	if (!model) {
+		model = availableModels.find((m) => m.isDefault) || availableModels[0];
+	}
+
 	const provider =
 		model?.provider || (env.AI_PROVIDER as string) || "huggingface";
 
@@ -52,7 +59,7 @@ export function getAIConfig(modelId: string, userApiKey?: string): AIConfig {
 		case "gemini":
 			baseURL =
 				env.GEMINI_BASE_URL ||
-				"https://generativelanguage.googleapis.com/v1beta/openai/";
+				"https://generativelanguage.googleapis.com/v1beta/openai";
 			break;
 		case "claude":
 			baseURL = env.CLAUDE_BASE_URL || "";
@@ -67,9 +74,15 @@ export function getAIConfig(modelId: string, userApiKey?: string): AIConfig {
 		baseURL = env.AI_BASE_URL;
 	}
 
+	// Nettoyage de l'URL (enlever le slash final s'il existe)
+	if (baseURL.endsWith("/")) {
+		baseURL = baseURL.slice(0, -1);
+	}
+
 	return {
 		apiKey: apiKey || "",
 		baseURL,
 		provider,
+		actualModelId: model?.modelId || modelId,
 	};
 }
