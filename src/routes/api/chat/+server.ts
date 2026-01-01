@@ -213,23 +213,42 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			);
 		}
 
-		// Gestion de la conversation (seulement si connecte)
+		// Gestion de la conversation (seulement si connecté)
 		let currentConversationId = conversationId;
 		let conversationHistory: ChatMessage[] = [];
 
 		if (session && user) {
-			if (!currentConversationId) {
-				// Nouvelle conversation - creation synchrone car on a besoin de l'ID
-				currentConversationId = await createConversation(user.id, message);
-			} else {
-				// Charger l'historique depuis la BDD
-				conversationHistory = await loadConversationHistory(
-					currentConversationId,
-				);
+			let validatedId: string | null = null;
+
+			// Vérification de la validité de l'ID fourni
+			if (
+				currentConversationId &&
+				currentConversationId !== "undefined" &&
+				currentConversationId !== "null"
+			) {
+				const conv = await db.conversation.findUnique({
+					where: { id: currentConversationId },
+					select: { userId: true },
+				});
+
+				if (conv && conv.userId === user.id) {
+					validatedId = currentConversationId;
+				}
 			}
 
-			// Sauvegarder le message utilisateur en arriere-plan
-			saveMessageAsync(currentConversationId, "user", message);
+			if (validatedId) {
+				// L'ID est valide, on charge l'historique
+				conversationHistory = await loadConversationHistory(validatedId);
+			} else {
+				// Créer une nouvelle conversation si l'ID est invalide ou manquant
+				const newId = await createConversation(user.id, message);
+				currentConversationId = newId;
+				validatedId = newId;
+				conversationHistory = [];
+			}
+
+			// Sauvegarder le message utilisateur en arrière-plan
+			saveMessageAsync(validatedId, "user", message);
 		}
 
 		// Construction du contexte pour l'IA
