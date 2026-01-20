@@ -13,6 +13,7 @@ import { settingsStore } from "./settings.store";
 interface ChatState {
 	conversations: Conversation[];
 	currentConversationId: string | null;
+	deletingConversationId: string | null;
 	isLoading: boolean;
 	isMessagesLoading: boolean;
 	isStreaming: boolean;
@@ -23,6 +24,7 @@ interface ChatState {
 const initialState: ChatState = {
 	conversations: [],
 	currentConversationId: null,
+	deletingConversationId: null,
 	isLoading: false,
 	isMessagesLoading: false,
 	isStreaming: false,
@@ -195,8 +197,10 @@ function createChatStore() {
 
 		/**
 		 * Supprime une conversation
+		 * Si la conversation supprimee est celle active, on la ferme (currentConversationId = null)
 		 */
 		async deleteConversation(id: string) {
+			update((state) => ({ ...state, deletingConversationId: id }));
 			try {
 				if (id && id !== "temp-new") {
 					await httpClient.delete(`/api/conversations/${id}`);
@@ -206,19 +210,23 @@ function createChatStore() {
 					const newConversations = state.conversations.filter(
 						(c) => c.id !== id,
 					);
+					const isCurrent = state.currentConversationId === id;
+
 					return {
 						...state,
 						conversations: newConversations,
-						currentConversationId:
-							state.currentConversationId === id
-								? newConversations[0]?.id || null
-								: state.currentConversationId,
+						// Si c'etait la conversation active, on met a null (pas de conversation selectionnee)
+						currentConversationId: isCurrent
+							? null
+							: state.currentConversationId,
+						deletingConversationId: null,
 					};
 				});
 			} catch (error) {
 				update((state) => ({
 					...state,
 					error: (error as Error).message,
+					deletingConversationId: null,
 				}));
 			}
 		},
