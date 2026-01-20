@@ -10,50 +10,48 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw redirect(303, "/");
 	}
 
-	// Fetch or create settings for the user
-	let setting = await db.setting.findUnique({
-		where: { userId: user.id },
-	});
-
-	if (!setting) {
-		setting = await db.setting.create({
-			data: {
-				userId: user.id,
-				// Check if old user key exists and migrate it?
-				// For simplicity, we start fresh or user re-enters.
-				// Actually, helpful to migrate if exists.
-			},
+	const settingsPromise = (async () => {
+		// Fetch or create settings for the user
+		let setting = await db.setting.findUnique({
+			where: { userId: user.id },
 		});
-	}
 
-	// Decrypt keys for client usage (be careful here, but user needs to see/edit them?)
-	// Usually we send back placeholders if we don't want to expose, but for a settings page
-	// where they can edit, often we send it back or empty if they want to change.
-	// The current UI binds `apiKey`.
-	let decryptedApiKey = "";
-	if (setting.apiKey) {
-		try {
-			decryptedApiKey = decrypt(setting.apiKey);
-		} catch (_e) {
-			// If decryption fails (maybe it wasn't encrypted legacy data), return raw or empty
-			decryptedApiKey = setting.apiKey;
+		if (!setting) {
+			setting = await db.setting.create({
+				data: {
+					userId: user.id,
+				},
+			});
 		}
-	}
 
-	let decryptedTelegramToken = "";
-	if (setting.telegramBotToken) {
-		try {
-			decryptedTelegramToken = decrypt(setting.telegramBotToken);
-		} catch (_e) {
-			decryptedTelegramToken = setting.telegramBotToken || "";
+		let decryptedApiKey = "";
+		if (setting.apiKey) {
+			try {
+				decryptedApiKey = decrypt(setting.apiKey);
+			} catch (_e) {
+				decryptedApiKey = setting.apiKey;
+			}
 		}
-	}
 
-	return {
-		settings: {
+		let decryptedTelegramToken = "";
+		if (setting.telegramBotToken) {
+			try {
+				decryptedTelegramToken = decrypt(setting.telegramBotToken);
+			} catch (_e) {
+				decryptedTelegramToken = setting.telegramBotToken || "";
+			}
+		}
+
+		return {
 			...setting,
 			apiKey: decryptedApiKey,
 			telegramBotToken: decryptedTelegramToken,
+		};
+	})();
+
+	return {
+		streamed: {
+			settings: settingsPromise,
 		},
 	};
 };

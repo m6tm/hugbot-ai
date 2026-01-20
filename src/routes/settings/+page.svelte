@@ -21,7 +21,7 @@ import { slide } from "svelte/transition";
 import { enhance } from "$app/forms";
 import { goto } from "$app/navigation";
 import { RAGService } from "$lib/ai/rag";
-import { httpClient } from "$lib/infrastructure/http";
+import PageLoader from "$lib/components/ui/PageLoader.svelte";
 import { integrationsStore, settingsStore, themeStore } from "$lib/stores";
 
 let { data } = $props();
@@ -79,9 +79,8 @@ onMount(async () => {
 
 	// 2. Set Server State AND Local State from server data (data.settings)
 	// This ensures isDirty returns false on initial load
-	if (data.settings) {
-		const settings = data.settings;
-
+	const settings = await data.streamed.settings;
+	if (settings) {
 		// Set local state from server data
 		apiKey = settings.apiKey || "";
 		temperature = settings.temperature ?? 0.7;
@@ -279,560 +278,564 @@ async function handleAddDocument() {
 }
 </script>
 
-<div class="settings-container">
-  <header class="settings-header">
-    <button
-      class="back-btn"
-      onclick={() => goto("/")}
-      aria-label="Retour a l'accueil"
-    >
-      <ArrowLeft size={20} />
-      <span>Retour</span>
-    </button>
-    <h1>Parametres</h1>
-    <p class="subtitle">Gerez vos preferences et configurations AI</p>
-  </header>
+{#await data.streamed.settings}
+  <PageLoader />
+{:then settings}
+  <div class="settings-container">
+    <header class="settings-header">
+      <button
+        class="back-btn"
+        onclick={() => goto("/")}
+        aria-label="Retour a l'accueil"
+      >
+        <ArrowLeft size={20} />
+        <span>Retour</span>
+      </button>
+      <h1>Parametres</h1>
+      <p class="subtitle">Gerez vos preferences et configurations AI</p>
+    </header>
 
-  <div class="settings-grid">
-    <!-- Section Apparence -->
-    <form
-      method="POST"
-      action="?/saveSettings"
-      use:enhance={handleSubmit}
-      class="settings-form"
-    >
-      <input type="hidden" name="section" value="appearance" />
-      <section class="settings-card">
-        <div class="card-header">
-          <div class="icon-wrapper theme">
-            <Sun size={20} />
-          </div>
-          <h2>Apparence</h2>
-        </div>
-
-        <div class="card-content">
-          <div class="setting-item">
-            <div class="setting-label">
-              <span>Theme de l'interface</span>
-              <small>Choisissez entre le mode clair et sombre</small>
+    <div class="settings-grid">
+      <!-- Section Apparence -->
+      <form
+        method="POST"
+        action="?/saveSettings"
+        use:enhance={handleSubmit}
+        class="settings-form"
+      >
+        <input type="hidden" name="section" value="appearance" />
+        <section class="settings-card">
+          <div class="card-header">
+            <div class="icon-wrapper theme">
+              <Sun size={20} />
             </div>
-            <button
-              class="theme-toggle"
-              onclick={(e) => {
-                e.preventDefault();
-                themeStore.toggle();
-              }}
-            >
-              {#if $themeStore.isDark}
-                <Moon size={16} class="theme-icon" />
-                Mode Sombre
-              {:else}
-                <Sun size={16} class="theme-icon" />
-                Mode Clair
-              {/if}
-            </button>
+            <h2>Apparence</h2>
           </div>
 
-          <div class="setting-item">
-            <div class="setting-label">
-              <span>Theme du code</span>
-              <small>Style des blocs de code</small>
-            </div>
-            <select bind:value={codeTheme} class="select-input">
-              <option value="tokyo-night">Tokyo Night</option>
-              <option value="github-dark">GitHub Dark</option>
-              <option value="dracula">Dracula</option>
-            </select>
-          </div>
-
-          <div class="card-footer">
-            <button
-              class="save-btn-small"
-              disabled={!isDirty("appearance") || isSavingAppearance}
-            >
-              {#if isSavingAppearance}
-                <Loader2 size={16} class="animate-spin" />
-              {:else}
-                Enregistrer
-              {/if}
-            </button>
-          </div>
-        </div>
-      </section>
-    </form>
-
-    <!-- Section Configuration AI -->
-    <form
-      method="POST"
-      action="?/saveSettings"
-      use:enhance={handleSubmit}
-      class="settings-form"
-    >
-      <input type="hidden" name="section" value="ai" />
-      <section class="settings-card">
-        <div class="card-header">
-          <div class="icon-wrapper ai">
-            <Mic size={20} />
-          </div>
-          <h2>Configuration AI (Hugging Face)</h2>
-        </div>
-
-        <div class="card-content">
-          <div class="setting-item">
-            <div class="setting-label">
-              <span>Cle API Hugging Face</span>
-              <small>Necessaire pour utiliser les modeles open source</small>
-            </div>
-            <div class="input-wrapper">
-              <input
-                type="password"
-                placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                bind:value={apiKey}
-                class="text-input"
-              />
-              <a
-                href="https://huggingface.co/settings/tokens"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="link-helper"
+          <div class="card-content">
+            <div class="setting-item">
+              <div class="setting-label">
+                <span>Theme de l'interface</span>
+                <small>Choisissez entre le mode clair et sombre</small>
+              </div>
+              <button
+                class="theme-toggle"
+                onclick={(e) => {
+                  e.preventDefault();
+                  themeStore.toggle();
+                }}
               >
-                Obtenir une cle gratuite →
-              </a>
+                {#if $themeStore.isDark}
+                  <Moon size={16} class="theme-icon" />
+                  Mode Sombre
+                {:else}
+                  <Sun size={16} class="theme-icon" />
+                  Mode Clair
+                {/if}
+              </button>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-label">
+                <span>Theme du code</span>
+                <small>Style des blocs de code</small>
+              </div>
+              <select bind:value={codeTheme} class="select-input">
+                <option value="tokyo-night">Tokyo Night</option>
+                <option value="github-dark">GitHub Dark</option>
+                <option value="dracula">Dracula</option>
+              </select>
+            </div>
+
+            <div class="card-footer">
+              <button
+                class="save-btn-small"
+                disabled={!isDirty("appearance") || isSavingAppearance}
+              >
+                {#if isSavingAppearance}
+                  <Loader2 size={16} class="animate-spin" />
+                {:else}
+                  Enregistrer
+                {/if}
+              </button>
             </div>
           </div>
+        </section>
+      </form>
 
-          <div class="setting-item">
-            <div class="setting-label">
-              <span>Temperature ({temperature})</span>
-              <small>Plus la valeur est elevee, plus l'IA est creative</small>
+      <!-- Section Configuration AI -->
+      <form
+        method="POST"
+        action="?/saveSettings"
+        use:enhance={handleSubmit}
+        class="settings-form"
+      >
+        <input type="hidden" name="section" value="ai" />
+        <section class="settings-card">
+          <div class="card-header">
+            <div class="icon-wrapper ai">
+              <Mic size={20} />
             </div>
-            <div class="slider-wrapper">
-              <input
-                type="range"
-                min="0.1"
-                max="1"
-                step="0.1"
-                bind:value={temperature}
-                class="range-input"
-              />
-              <div class="range-labels">
-                <span>Precis</span>
-                <span>Creatif</span>
+            <h2>Configuration AI (Hugging Face)</h2>
+          </div>
+
+          <div class="card-content">
+            <div class="setting-item">
+              <div class="setting-label">
+                <span>Cle API Hugging Face</span>
+                <small>Necessaire pour utiliser les modeles open source</small>
+              </div>
+              <div class="input-wrapper">
+                <input
+                  type="password"
+                  placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  bind:value={apiKey}
+                  class="text-input"
+                />
+                <a
+                  href="https://huggingface.co/settings/tokens"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="link-helper"
+                >
+                  Obtenir une cle gratuite →
+                </a>
               </div>
             </div>
-          </div>
 
-          <div class="setting-item">
-            <div class="setting-label">
-              <span>Longueur maximale ({maxTokens} tokens)</span>
-              <small>Limite la longueur des reponses</small>
+            <div class="setting-item">
+              <div class="setting-label">
+                <span>Temperature ({temperature})</span>
+                <small>Plus la valeur est elevee, plus l'IA est creative</small>
+              </div>
+              <div class="slider-wrapper">
+                <input
+                  type="range"
+                  min="0.1"
+                  max="1"
+                  step="0.1"
+                  bind:value={temperature}
+                  class="range-input"
+                />
+                <div class="range-labels">
+                  <span>Precis</span>
+                  <span>Creatif</span>
+                </div>
+              </div>
             </div>
-            <div class="slider-wrapper">
-              <input
-                type="range"
-                min="256"
-                max="4096"
-                step="256"
-                bind:value={maxTokens}
-                class="range-input"
-              />
+
+            <div class="setting-item">
+              <div class="setting-label">
+                <span>Longueur maximale ({maxTokens} tokens)</span>
+                <small>Limite la longueur des reponses</small>
+              </div>
+              <div class="slider-wrapper">
+                <input
+                  type="range"
+                  min="256"
+                  max="4096"
+                  step="256"
+                  bind:value={maxTokens}
+                  class="range-input"
+                />
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <button
+                class="save-btn-small"
+                disabled={!isDirty("ai") || isSavingAi}
+              >
+                {#if isSavingAi}
+                  <Loader2 size={16} class="animate-spin" />
+                {:else}
+                  Enregistrer
+                {/if}
+              </button>
             </div>
           </div>
+        </section>
+      </form>
 
-          <div class="card-footer">
-            <button
-              class="save-btn-small"
-              disabled={!isDirty("ai") || isSavingAi}
-            >
-              {#if isSavingAi}
-                <Loader2 size={16} class="animate-spin" />
-              {:else}
-                Enregistrer
-              {/if}
-            </button>
+      <!-- Section Instructions Systeme -->
+      <form
+        method="POST"
+        action="?/saveSettings"
+        use:enhance={handleSubmit}
+        class="settings-form"
+      >
+        <input type="hidden" name="section" value="system" />
+        <section class="settings-card">
+          <div class="card-header">
+            <div class="icon-wrapper system">
+              <FileText size={20} />
+            </div>
+            <h2>Instructions Systeme</h2>
           </div>
-        </div>
-      </section>
-    </form>
 
-    <!-- Section Instructions Systeme -->
-    <form
-      method="POST"
-      action="?/saveSettings"
-      use:enhance={handleSubmit}
-      class="settings-form"
-    >
-      <input type="hidden" name="section" value="system" />
+          <div class="card-content">
+            <div class="setting-item full-width">
+              <div class="setting-label">
+                <span>Prompt Systeme</span>
+                <small
+                  >Instructions globales pour definir le comportement de l'IA.</small
+                >
+              </div>
+              <div class="input-wrapper">
+                <textarea
+                  bind:value={systemInstruction}
+                  class="text-area"
+                  rows="10"
+                  placeholder="Entrez vos instructions systeme ici..."
+                ></textarea>
+                <div class="helper-text">
+                  Ces instructions seront envoyees a chaque debut de
+                  conversation pour guider l'IA.
+                </div>
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <button
+                class="save-btn-small"
+                disabled={!isDirty("system") || isSavingSystem}
+              >
+                {#if isSavingSystem}
+                  <Loader2 size={16} class="animate-spin" />
+                {:else}
+                  Enregistrer
+                {/if}
+              </button>
+            </div>
+          </div>
+        </section>
+      </form>
+
+      <!-- Section Knowledge Base -->
       <section class="settings-card">
         <div class="card-header">
-          <div class="icon-wrapper system">
-            <FileText size={20} />
+          <div class="icon-wrapper database">
+            <Database size={20} />
           </div>
-          <h2>Instructions Systeme</h2>
+          <h2>Base de Connaissance (RAG Local)</h2>
         </div>
 
         <div class="card-content">
           <div class="setting-item full-width">
             <div class="setting-label">
-              <span>Prompt Systeme</span>
+              <span>Ajouter des documents</span>
               <small
-                >Instructions globales pour definir le comportement de l'IA.</small
+                >Ces informations seront utilisées par l'IA pour répondre.</small
               >
             </div>
             <div class="input-wrapper">
               <textarea
-                bind:value={systemInstruction}
+                bind:value={kbText}
                 class="text-area"
-                rows="10"
-                placeholder="Entrez vos instructions systeme ici..."
+                rows="6"
+                placeholder="Collez ici du texte ou de la documentation..."
               ></textarea>
-              <div class="helper-text">
-                Ces instructions seront envoyees a chaque debut de conversation
-                pour guider l'IA.
+
+              <div
+                class="button-group"
+                style="justify-content: flex-end; margin-top: 10px;"
+              >
+                <button
+                  class="save-btn-small"
+                  onclick={handleAddDocument}
+                  disabled={isIndexing || !kbText}
+                >
+                  {#if isIndexing}
+                    <Loader2 size={16} class="animate-spin" /> Indexation...
+                  {:else if kbSuccess}
+                    <Check size={16} /> Ajouté !
+                  {:else}
+                    Ajouter à la base
+                  {/if}
+                </button>
               </div>
             </div>
           </div>
-
-          <div class="card-footer">
-            <button
-              class="save-btn-small"
-              disabled={!isDirty("system") || isSavingSystem}
-            >
-              {#if isSavingSystem}
-                <Loader2 size={16} class="animate-spin" />
-              {:else}
-                Enregistrer
-              {/if}
-            </button>
-          </div>
         </div>
       </section>
-    </form>
 
-    <!-- Section Knowledge Base -->
-    <section class="settings-card">
-      <div class="card-header">
-        <div class="icon-wrapper database">
-          <Database size={20} />
-        </div>
-        <h2>Base de Connaissance (RAG Local)</h2>
-      </div>
-
-      <div class="card-content">
-        <div class="setting-item full-width">
-          <div class="setting-label">
-            <span>Ajouter des documents</span>
-            <small
-              >Ces informations seront utilisées par l'IA pour répondre.</small
-            >
+      <!-- Section Intégrations -->
+      <form
+        method="POST"
+        action="?/saveSettings"
+        use:enhance={handleSubmit}
+        class="settings-form"
+      >
+        <input type="hidden" name="section" value="integrations" />
+        <section class="settings-card">
+          <div class="card-header">
+            <div class="icon-wrapper integration">
+              <Heart size={20} />
+            </div>
+            <h2>Intégrations</h2>
           </div>
-          <div class="input-wrapper">
-            <textarea
-              bind:value={kbText}
-              class="text-area"
-              rows="6"
-              placeholder="Collez ici du texte ou de la documentation..."
-            ></textarea>
 
-            <div
-              class="button-group"
-              style="justify-content: flex-end; margin-top: 10px;"
-            >
+          <div class="card-content">
+            <div class="integration-help">
+              <p>
+                Connectez ChatAI à vos systèmes externes pour recevoir des
+                notifications en temps réel.
+              </p>
+              <a href="/docs/integrations" class="docs-link">
+                <FileText size={16} />
+                Voir la documentation
+              </a>
+            </div>
+            <!-- Intégration Telegram -->
+            <div class="integration-item">
+              <div class="integration-header">
+                <div class="integration-info">
+                  <div class="integration-title">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.93 1.23-5.46 3.61-.52.36-.99.53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.37-.49 1.02-.74 4.02-1.76 6.7-2.92 8.03-3.49 3.82-1.58 4.62-1.85 5.14-1.86.11 0 .37.03.53.16.14.11.18.26.2.37.02.06.04.19.02.3z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                    <span>Telegram</span>
+                  </div>
+                  <small>Recevez des notifications via Telegram</small>
+                </div>
+                <label class="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={telegramEnabled}
+                    onchange={handleTelegramToggle}
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+
+              {#if telegramEnabled}
+                <div class="integration-config">
+                  <div class="setting-item">
+                    <div class="setting-label">
+                      <span>Token du Bot</span>
+                      <small>Créez un bot via @BotFather sur Telegram</small>
+                    </div>
+                    <div class="input-wrapper">
+                      <input
+                        type="password"
+                        placeholder="1234567890:ABCdefghijklmnopqrstuvwxyz"
+                        bind:value={telegramBotToken}
+                        class="text-input"
+                      />
+                      <div class="button-group">
+                        <button
+                          class="test-btn"
+                          onclick={(e) => {
+                            e.preventDefault();
+                            testTelegramConnection();
+                          }}
+                          disabled={!telegramBotToken ||
+                            telegramTestStatus === "testing"}
+                        >
+                          {#if telegramTestStatus === "testing"}
+                            Test...
+                          {:else if telegramTestStatus === "success"}
+                            <Check size={14} />
+                            Valide
+                          {:else if telegramTestStatus === "error"}
+                            <X size={14} />
+                            Erreur
+                          {:else}
+                            Tester Bot
+                          {/if}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="setting-item">
+                    <div class="setting-label">
+                      <span>Chat ID</span>
+                      <small>ID du chat où envoyer les notifications</small>
+                    </div>
+                    <div class="input-wrapper">
+                      <input
+                        type="text"
+                        placeholder="-1001234567890"
+                        bind:value={telegramChatId}
+                        class="text-input"
+                      />
+                      <div class="button-group">
+                        <button
+                          class="test-btn"
+                          onclick={(e) => {
+                            e.preventDefault();
+                            sendTelegramTestMessage();
+                          }}
+                          disabled={!telegramBotToken ||
+                            !telegramChatId ||
+                            telegramTestStatus === "testing"}
+                        >
+                          {#if telegramTestStatus === "testing"}
+                            Envoi...
+                          {:else if telegramTestStatus === "success"}
+                            <Check size={14} />
+                            Envoyé
+                          {:else if telegramTestStatus === "error"}
+                            <X size={14} />
+                            Échec
+                          {:else}
+                            Test Message
+                          {/if}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {#if telegramErrorMessage}
+                    <div
+                      class="telegram-status"
+                      class:success={telegramTestStatus === "success"}
+                      class:error={telegramTestStatus === "error"}
+                    >
+                      {telegramErrorMessage}
+                    </div>
+                  {/if}
+
+                  <div class="setting-item">
+                    <div class="setting-label">
+                      <span>Options de notification</span>
+                      <small>Configurez quand recevoir des notifications</small>
+                    </div>
+                    <div class="checkbox-group">
+                      <label class="checkbox-item">
+                        <input
+                          type="checkbox"
+                          bind:checked={telegramSendOnNewMessage}
+                        />
+                        <span>Nouveaux messages</span>
+                      </label>
+                      <label class="checkbox-item">
+                        <input
+                          type="checkbox"
+                          bind:checked={telegramSendOnError}
+                        />
+                        <span>Erreurs système</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- Tutoriel d'aide -->
+                  <div class="telegram-help">
+                    <div
+                      class="help-title"
+                      onclick={() => {
+                        isHelpCollapsed = !isHelpCollapsed;
+                      }}
+                      role="button"
+                      tabindex="0"
+                      onkeydown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          isHelpCollapsed = !isHelpCollapsed;
+                        }
+                      }}
+                    >
+                      <ChevronRight
+                        size={16}
+                        class={`help-icon ${!isHelpCollapsed ? "rotated" : ""}`}
+                      />
+                      <span>Comment configurer ?</span>
+                    </div>
+
+                    {#if !isHelpCollapsed}
+                      <div
+                        class="help-content"
+                        transition:slide={{ duration: 300 }}
+                      >
+                        <div class="help-section">
+                          <h5>Obtenir le Token du Bot</h5>
+                          <ol>
+                            <li>
+                              Ouvrez Telegram et recherchez <strong
+                                >@BotFather</strong
+                              >
+                            </li>
+                            <li>
+                              Envoyez <code>/newbot</code> et suivez les instructions
+                            </li>
+                            <li>
+                              Copiez le token fourni (format: <code
+                                >123456:ABC-xyz...</code
+                              >)
+                            </li>
+                          </ol>
+                        </div>
+
+                        <div class="help-section">
+                          <h5>Obtenir votre Chat ID</h5>
+                          <div class="help-method">
+                            <strong>Méthode simple :</strong>
+                            <ol>
+                              <li>
+                                Recherchez <strong>@userinfobot</strong> sur Telegram
+                              </li>
+                              <li>Envoyez-lui n'importe quel message</li>
+                              <li>Il vous répondra avec votre Chat ID</li>
+                            </ol>
+                          </div>
+                          <div class="help-method">
+                            <strong>Pour un groupe :</strong>
+                            <ol>
+                              <li>Ajoutez votre bot au groupe</li>
+                              <li>Envoyez un message dans le groupe</li>
+                              <li>
+                                Visitez : <code
+                                  >https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code
+                                >
+                              </li>
+                              <li>
+                                Cherchez <code>"chat":{'"id":'}</code> dans la réponse
+                              </li>
+                            </ol>
+                          </div>
+                          <div class="help-note">
+                            <strong>Note :</strong>
+                            Les Chat ID personnels sont positifs (ex:
+                            <code>123456789</code>), les groupes sont négatifs
+                            (ex:
+                            <code>-1001234567890</code>)
+                          </div>
+                        </div>
+                      </div>
+                    {/if}
+                  </div>
+                </div>
+              {/if}
+            </div>
+
+            <div class="card-footer">
               <button
                 class="save-btn-small"
-                onclick={handleAddDocument}
-                disabled={isIndexing || !kbText}
+                disabled={!isDirty("integrations") || isSavingIntegrations}
               >
-                {#if isIndexing}
-                  <Loader2 size={16} class="animate-spin" /> Indexation...
-                {:else if kbSuccess}
-                  <Check size={16} /> Ajouté !
+                {#if isSavingIntegrations}
+                  <Loader2 size={16} class="animate-spin" />
                 {:else}
-                  Ajouter à la base
+                  Enregistrer
                 {/if}
               </button>
             </div>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Section Intégrations -->
-    <form
-      method="POST"
-      action="?/saveSettings"
-      use:enhance={handleSubmit}
-      class="settings-form"
-    >
-      <input type="hidden" name="section" value="integrations" />
-      <section class="settings-card">
-        <div class="card-header">
-          <div class="icon-wrapper integration">
-            <Heart size={20} />
-          </div>
-          <h2>Intégrations</h2>
-        </div>
-
-        <div class="card-content">
-          <div class="integration-help">
-            <p>
-              Connectez ChatAI à vos systèmes externes pour recevoir des
-              notifications en temps réel.
-            </p>
-            <a href="/docs/integrations" class="docs-link">
-              <FileText size={16} />
-              Voir la documentation
-            </a>
-          </div>
-          <!-- Intégration Telegram -->
-          <div class="integration-item">
-            <div class="integration-header">
-              <div class="integration-info">
-                <div class="integration-title">
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.93 1.23-5.46 3.61-.52.36-.99.53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.37-.49 1.02-.74 4.02-1.76 6.7-2.92 8.03-3.49 3.82-1.58 4.62-1.85 5.14-1.86.11 0 .37.03.53.16.14.11.18.26.2.37.02.06.04.19.02.3z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                  <span>Telegram</span>
-                </div>
-                <small>Recevez des notifications via Telegram</small>
-              </div>
-              <label class="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={telegramEnabled}
-                  onchange={handleTelegramToggle}
-                />
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-
-            {#if telegramEnabled}
-              <div class="integration-config">
-                <div class="setting-item">
-                  <div class="setting-label">
-                    <span>Token du Bot</span>
-                    <small>Créez un bot via @BotFather sur Telegram</small>
-                  </div>
-                  <div class="input-wrapper">
-                    <input
-                      type="password"
-                      placeholder="1234567890:ABCdefghijklmnopqrstuvwxyz"
-                      bind:value={telegramBotToken}
-                      class="text-input"
-                    />
-                    <div class="button-group">
-                      <button
-                        class="test-btn"
-                        onclick={(e) => {
-                          e.preventDefault();
-                          testTelegramConnection();
-                        }}
-                        disabled={!telegramBotToken ||
-                          telegramTestStatus === "testing"}
-                      >
-                        {#if telegramTestStatus === "testing"}
-                          Test...
-                        {:else if telegramTestStatus === "success"}
-                          <Check size={14} />
-                          Valide
-                        {:else if telegramTestStatus === "error"}
-                          <X size={14} />
-                          Erreur
-                        {:else}
-                          Tester Bot
-                        {/if}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="setting-item">
-                  <div class="setting-label">
-                    <span>Chat ID</span>
-                    <small>ID du chat où envoyer les notifications</small>
-                  </div>
-                  <div class="input-wrapper">
-                    <input
-                      type="text"
-                      placeholder="-1001234567890"
-                      bind:value={telegramChatId}
-                      class="text-input"
-                    />
-                    <div class="button-group">
-                      <button
-                        class="test-btn"
-                        onclick={(e) => {
-                          e.preventDefault();
-                          sendTelegramTestMessage();
-                        }}
-                        disabled={!telegramBotToken ||
-                          !telegramChatId ||
-                          telegramTestStatus === "testing"}
-                      >
-                        {#if telegramTestStatus === "testing"}
-                          Envoi...
-                        {:else if telegramTestStatus === "success"}
-                          <Check size={14} />
-                          Envoyé
-                        {:else if telegramTestStatus === "error"}
-                          <X size={14} />
-                          Échec
-                        {:else}
-                          Test Message
-                        {/if}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {#if telegramErrorMessage}
-                  <div
-                    class="telegram-status"
-                    class:success={telegramTestStatus === "success"}
-                    class:error={telegramTestStatus === "error"}
-                  >
-                    {telegramErrorMessage}
-                  </div>
-                {/if}
-
-                <div class="setting-item">
-                  <div class="setting-label">
-                    <span>Options de notification</span>
-                    <small>Configurez quand recevoir des notifications</small>
-                  </div>
-                  <div class="checkbox-group">
-                    <label class="checkbox-item">
-                      <input
-                        type="checkbox"
-                        bind:checked={telegramSendOnNewMessage}
-                      />
-                      <span>Nouveaux messages</span>
-                    </label>
-                    <label class="checkbox-item">
-                      <input
-                        type="checkbox"
-                        bind:checked={telegramSendOnError}
-                      />
-                      <span>Erreurs système</span>
-                    </label>
-                  </div>
-                </div>
-
-                <!-- Tutoriel d'aide -->
-                <div class="telegram-help">
-                  <div
-                    class="help-title"
-                    onclick={() => {
-                      isHelpCollapsed = !isHelpCollapsed;
-                    }}
-                    role="button"
-                    tabindex="0"
-                    onkeydown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        isHelpCollapsed = !isHelpCollapsed;
-                      }
-                    }}
-                  >
-                    <ChevronRight
-                      size={16}
-                      class={`help-icon ${!isHelpCollapsed ? "rotated" : ""}`}
-                    />
-                    <span>Comment configurer ?</span>
-                  </div>
-
-                  {#if !isHelpCollapsed}
-                    <div
-                      class="help-content"
-                      transition:slide={{ duration: 300 }}
-                    >
-                      <div class="help-section">
-                        <h5>Obtenir le Token du Bot</h5>
-                        <ol>
-                          <li>
-                            Ouvrez Telegram et recherchez <strong
-                              >@BotFather</strong
-                            >
-                          </li>
-                          <li>
-                            Envoyez <code>/newbot</code> et suivez les instructions
-                          </li>
-                          <li>
-                            Copiez le token fourni (format: <code
-                              >123456:ABC-xyz...</code
-                            >)
-                          </li>
-                        </ol>
-                      </div>
-
-                      <div class="help-section">
-                        <h5>Obtenir votre Chat ID</h5>
-                        <div class="help-method">
-                          <strong>Méthode simple :</strong>
-                          <ol>
-                            <li>
-                              Recherchez <strong>@userinfobot</strong> sur Telegram
-                            </li>
-                            <li>Envoyez-lui n'importe quel message</li>
-                            <li>Il vous répondra avec votre Chat ID</li>
-                          </ol>
-                        </div>
-                        <div class="help-method">
-                          <strong>Pour un groupe :</strong>
-                          <ol>
-                            <li>Ajoutez votre bot au groupe</li>
-                            <li>Envoyez un message dans le groupe</li>
-                            <li>
-                              Visitez : <code
-                                >https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code
-                              >
-                            </li>
-                            <li>
-                              Cherchez <code>"chat":{'"id":'}</code> dans la réponse
-                            </li>
-                          </ol>
-                        </div>
-                        <div class="help-note">
-                          <strong>Note :</strong>
-                          Les Chat ID personnels sont positifs (ex:
-                          <code>123456789</code>), les groupes sont négatifs
-                          (ex:
-                          <code>-1001234567890</code>)
-                        </div>
-                      </div>
-                    </div>
-                  {/if}
-                </div>
-              </div>
-            {/if}
-          </div>
-
-          <div class="card-footer">
-            <button
-              class="save-btn-small"
-              disabled={!isDirty("integrations") || isSavingIntegrations}
-            >
-              {#if isSavingIntegrations}
-                <Loader2 size={16} class="animate-spin" />
-              {:else}
-                Enregistrer
-              {/if}
-            </button>
-          </div>
-        </div>
-      </section>
-    </form>
+        </section>
+      </form>
+    </div>
   </div>
-</div>
+{/await}
 
 <style>
   .settings-container {

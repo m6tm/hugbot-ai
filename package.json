@@ -13,7 +13,7 @@
 		"format": "biome format --write .",
 		"lint": "biome lint .",
 		"check:biome": "biome check .",
-		"validate": "pnpm check && pnpm check:biome"
+		"validate": "pnpm format && pnpm check && pnpm check:biome"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.8",
