@@ -1,5 +1,5 @@
 import { env } from "$env/dynamic/private";
-import { prisma } from "$lib/infrastructure/database/prisma";
+import prisma from "$lib/server/db";
 import { inngest } from "../client";
 
 /**

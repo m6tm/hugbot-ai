@@ -1,18 +1,30 @@
 /**
  * Store pour gerer le theme de l'application
+ * Utilise localStorage pour le stockage local
  */
 
 import { derived, writable } from "svelte/store";
 import { theme as defaultTheme } from "$lib/config/theme";
-import { db, isIndexedDBAvailable } from "$lib/infrastructure/database/db";
 
 type ThemeMode = "light" | "dark" | "system";
 
-const THEME_ID = "main_theme";
+const THEME_KEY = "hugbot_theme";
 
 interface ThemeState {
 	mode: ThemeMode;
 	isDark: boolean;
+}
+
+function isLocalStorageAvailable(): boolean {
+	if (typeof window === "undefined") return false;
+	try {
+		const test = "__storage_test__";
+		window.localStorage.setItem(test, test);
+		window.localStorage.removeItem(test);
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 function createThemeStore() {
@@ -25,20 +37,20 @@ function createThemeStore() {
 		subscribe,
 
 		/**
-		 * Initialise le theme depuis IndexedDB
+		 * Initialise le theme depuis localStorage
 		 */
 		async init() {
 			if (typeof window === "undefined") return;
 
-			if (!isIndexedDBAvailable()) {
+			if (!isLocalStorageAvailable()) {
 				this.applyTheme(true);
 				return;
 			}
 
 			try {
-				const stored = await db.theme.get(THEME_ID);
+				const stored = localStorage.getItem(THEME_KEY);
 				if (stored) {
-					const mode = stored.mode;
+					const mode = stored as ThemeMode;
 					const isDark = this.resolveIsDark(mode);
 					set({ mode, isDark });
 					this.applyTheme(isDark);
@@ -103,8 +115,8 @@ function createThemeStore() {
 		async setMode(mode: ThemeMode) {
 			const isDark = this.resolveIsDark(mode);
 
-			if (isIndexedDBAvailable()) {
-				await db.theme.put({ id: THEME_ID, mode });
+			if (isLocalStorageAvailable()) {
+				localStorage.setItem(THEME_KEY, mode);
 			}
 
 			this.applyTheme(isDark);
@@ -119,8 +131,8 @@ function createThemeStore() {
 				const newMode: ThemeMode = state.isDark ? "light" : "dark";
 				const isDark = !state.isDark;
 
-				if (isIndexedDBAvailable()) {
-					db.theme.put({ id: THEME_ID, mode: newMode });
+				if (isLocalStorageAvailable()) {
+					localStorage.setItem(THEME_KEY, newMode);
 				}
 
 				this.applyTheme(isDark);

@@ -1,16 +1,12 @@
 /**
  * Store Svelte pour gerer l'etat du chat
+ * Utilise uniquement la base de donnees en ligne (Supabase via Prisma)
  */
 
 import { derived, get, writable } from "svelte/store";
 import { invalidate } from "$app/navigation";
-import { ChatUseCase } from "$lib/application/use-cases/chat.use-case";
 import { getModelById } from "$lib/config/models";
 import type { Conversation } from "$lib/domain/entities/conversation";
-import type { ChatServicePort } from "$lib/domain/ports/chat-service.port";
-import { DexieStorageAdapter } from "$lib/infrastructure/adapters/dexie-storage.adapter";
-import { HuggingFaceAdapter } from "$lib/infrastructure/adapters/huggingface.adapter";
-import { MockChatAdapter } from "$lib/infrastructure/adapters/mock-chat.adapter";
 import { HttpClientError, httpClient } from "$lib/infrastructure/http";
 import { settingsStore } from "./settings.store";
 
@@ -34,40 +30,6 @@ const initialState: ChatState = {
 
 function createChatStore() {
 	const { subscribe, set, update } = writable<ChatState>(initialState);
-
-	const storage = new DexieStorageAdapter();
-	const mockAdapter = new MockChatAdapter();
-	const huggingFaceAdapter = new HuggingFaceAdapter({
-		apiKey: "",
-		modelId: "",
-	});
-
-	/**
-	 * Recupere le bon adaptateur selon les parametres
-	 */
-	function getChatService(): ChatServicePort {
-		const settings = get(settingsStore);
-		const model = getModelById(settings.currentModelId);
-
-		if (!model || model.provider === "mock") {
-			return mockAdapter;
-		}
-
-		if (model.provider === "huggingface") {
-			huggingFaceAdapter.setApiKey(settings.apiKey);
-			huggingFaceAdapter.setModel(model.modelId);
-			return huggingFaceAdapter;
-		}
-
-		return mockAdapter;
-	}
-
-	/**
-	 * Cree un ChatUseCase avec le bon service
-	 */
-	function createUseCase(): ChatUseCase {
-		return new ChatUseCase(storage, getChatService());
-	}
 
 	/**
 	 * Trie les conversations par date de mise a jour (plus recent en premier)
@@ -98,8 +60,8 @@ function createChatStore() {
 
 			update((state) => ({ ...state, isLoading: true }));
 			try {
-				const chatUseCase = createUseCase();
-				const conversations = await chatUseCase.getConversations();
+				const { data: conversations } =
+					await httpClient.get<Conversation[]>("/api/conversations");
 				update((state) => ({
 					...state,
 					conversations,
@@ -374,8 +336,6 @@ function createChatStore() {
 			}
 		},
 
-		// ... keep other methods if needed or refactor
-
 		/**
 		 * Modifie un message utilisateur et regenere la reponse
 		 * Supprime tous les messages apres le message modifie
@@ -495,87 +455,6 @@ function createChatStore() {
 		 */
 		reset() {
 			set(initialState);
-		},
-
-		/**
-		 * Synchronise les conversations locales avec le serveur
-		 */
-		async sync() {
-			try {
-				if (typeof localStorage === "undefined") return;
-
-				const lastSyncStr = localStorage.getItem("lastSyncTimestamp");
-				const lastSyncDate = lastSyncStr ? new Date(lastSyncStr) : new Date(0);
-
-				// Requete via l'adapter
-				// Note: On doit caster storage car l'interface n'a pas forcement tout si on l'a pas mise a jour partout
-				// mais ici on sait que c'est DexieStorageAdapter
-				const modifiedConversations =
-					await storage.getConversationsModifiedSince(lastSyncDate);
-
-				if (modifiedConversations.length === 0) {
-					console.log("No conversations to sync");
-					return;
-				}
-
-				console.log(`Syncing ${modifiedConversations.length} conversations...`);
-
-				await httpClient.post("/api/sync", {
-					conversations: modifiedConversations,
-				});
-				const now = new Date().toISOString();
-				localStorage.setItem("lastSyncTimestamp", now);
-				console.log("Sync success");
-			} catch (error) {
-				console.error("Sync error", error);
-			}
-		},
-
-		/**
-		 * Restaure les conversations du serveur vers la base locale
-		 * Fusionne intelligemment avec les donnees locales existantes
-		 */
-		async restore() {
-			try {
-				const { data: serverConversations } =
-					await httpClient.get<Conversation[]>("/api/sync/restore");
-
-				if (serverConversations.length === 0) {
-					console.log("No conversations to restore");
-					return;
-				}
-
-				console.log(`Restoring ${serverConversations.length} conversations...`);
-
-				// Pour chaque conversation du serveur, verifier si elle existe localement
-				for (const serverConv of serverConversations) {
-					const localConv = await storage.getConversation(serverConv.id);
-
-					if (!localConv) {
-						// La conversation n'existe pas localement, on la sauvegarde
-						await storage.saveConversation(serverConv);
-					} else {
-						// La conversation existe, on garde la plus recente
-						const serverDate = new Date(serverConv.updatedAt);
-						const localDate = new Date(localConv.updatedAt);
-
-						if (serverDate > localDate) {
-							await storage.saveConversation(serverConv);
-						}
-					}
-				}
-
-				// Recharger les conversations depuis Dexie
-				const allConversations = await storage.getAllConversations();
-				update((state) => ({
-					...state,
-					conversations: allConversations,
-				}));
-
-				console.log("Restore success");
-			} catch (error) {
-				console.error("Restore error", error);
-			}
 		},
 	};
 }

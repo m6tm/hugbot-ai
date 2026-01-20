@@ -1,5 +1,6 @@
 /**
  * Store pour gerer les modeles et parametres AI
+ * Utilise uniquement la base de donnees en ligne (via API)
  */
 
 import { get, writable } from "svelte/store";
@@ -9,7 +10,7 @@ import {
 	getDefaultModel,
 	getModelById,
 } from "$lib/config/models";
-import { db, isIndexedDBAvailable } from "$lib/infrastructure/database/db";
+import { httpClient } from "$lib/infrastructure/http";
 
 interface SettingsState {
 	currentModelId: string;
@@ -20,8 +21,6 @@ interface SettingsState {
 	systemInstruction: string;
 	isApiKeyConfigured: boolean;
 }
-
-const SETTINGS_ID = "main_settings";
 
 function getDefaultSettings(): SettingsState {
 	return {
@@ -35,46 +34,14 @@ function getDefaultSettings(): SettingsState {
 	};
 }
 
-async function loadSettings(): Promise<SettingsState> {
-	if (!isIndexedDBAvailable()) {
-		return getDefaultSettings();
-	}
-
-	try {
-		const stored = await db.settings.get(SETTINGS_ID);
-		if (stored) {
-			return {
-				currentModelId: stored.currentModelId || getDefaultModel().id,
-				apiKey: stored.apiKey || "",
-				temperature: stored.temperature ?? 0.7,
-				maxTokens: stored.maxTokens ?? 1024,
-				codeTheme: stored.codeTheme || "tokyo-night",
-				systemInstruction: stored.systemInstruction || "",
-				isApiKeyConfigured: !!stored.apiKey,
-			};
-		}
-
-		// Si les parametres n'existent pas, on initialise avec les valeurs par defaut
-		const defaults = getDefaultSettings();
-		await saveSettings(defaults);
-		return defaults;
-	} catch (error) {
-		console.error("Erreur lors du chargement des parametres:", error);
-		return getDefaultSettings();
-	}
-}
-
-async function saveSettings(state: SettingsState): Promise<void> {
-	if (!isIndexedDBAvailable()) return;
-
-	await db.settings.put({
-		id: SETTINGS_ID,
-		currentModelId: state.currentModelId,
-		apiKey: state.apiKey,
-		temperature: state.temperature,
-		maxTokens: state.maxTokens,
-		codeTheme: state.codeTheme,
-		systemInstruction: state.systemInstruction,
+/**
+ * Sauvegarde les parametres sur le serveur (non-bloquant)
+ */
+function saveSettingsToServer(
+	data: Partial<Omit<SettingsState, "isApiKeyConfigured">>,
+): void {
+	httpClient.patch("/api/settings", data).catch((error) => {
+		console.error("Erreur lors de la sauvegarde des parametres:", error);
 	});
 }
 
@@ -87,11 +54,29 @@ function createSettingsStore() {
 		subscribe,
 
 		/**
-		 * Initialise le store depuis IndexedDB
+		 * Initialise le store depuis le serveur
 		 */
 		async init() {
-			const settings = await loadSettings();
-			set(settings);
+			try {
+				const { data } = await httpClient.get<{
+					temperature: number;
+					maxTokens: number;
+					codeTheme: string;
+					systemInstruction: string;
+					isApiKeyConfigured: boolean;
+				}>("/api/settings");
+
+				update((state) => ({
+					...state,
+					temperature: data.temperature ?? 0.7,
+					maxTokens: data.maxTokens ?? 1024,
+					codeTheme: data.codeTheme || "tokyo-night",
+					systemInstruction: data.systemInstruction || "",
+					isApiKeyConfigured: data.isApiKeyConfigured,
+				}));
+			} catch (error) {
+				console.error("Erreur lors du chargement des parametres:", error);
+			}
 		},
 
 		/**
@@ -103,7 +88,6 @@ function createSettingsStore() {
 
 			update((state) => {
 				const newState = { ...state, currentModelId: modelId };
-				saveSettings(newState);
 				return newState;
 			});
 		},
@@ -118,7 +102,7 @@ function createSettingsStore() {
 					apiKey,
 					isApiKeyConfigured: !!apiKey,
 				};
-				saveSettings(newState);
+				saveSettingsToServer({ apiKey });
 				return newState;
 			});
 		},
@@ -129,7 +113,7 @@ function createSettingsStore() {
 		setTemperature(temperature: number) {
 			update((state) => {
 				const newState = { ...state, temperature };
-				saveSettings(newState);
+				saveSettingsToServer({ temperature });
 				return newState;
 			});
 		},
@@ -140,7 +124,7 @@ function createSettingsStore() {
 		setMaxTokens(maxTokens: number) {
 			update((state) => {
 				const newState = { ...state, maxTokens };
-				saveSettings(newState);
+				saveSettingsToServer({ maxTokens });
 				return newState;
 			});
 		},
@@ -151,7 +135,7 @@ function createSettingsStore() {
 		setCodeTheme(codeTheme: string) {
 			update((state) => {
 				const newState = { ...state, codeTheme };
-				saveSettings(newState);
+				saveSettingsToServer({ codeTheme });
 				return newState;
 			});
 		},
@@ -162,7 +146,7 @@ function createSettingsStore() {
 		setSystemInstruction(systemInstruction: string) {
 			update((state) => {
 				const newState = { ...state, systemInstruction };
-				saveSettings(newState);
+				saveSettingsToServer({ systemInstruction });
 				return newState;
 			});
 		},
@@ -188,7 +172,12 @@ function createSettingsStore() {
 		async reset() {
 			const defaultSettings = getDefaultSettings();
 			set(defaultSettings);
-			await saveSettings(defaultSettings);
+			saveSettingsToServer({
+				temperature: defaultSettings.temperature,
+				maxTokens: defaultSettings.maxTokens,
+				codeTheme: defaultSettings.codeTheme,
+				systemInstruction: defaultSettings.systemInstruction,
+			});
 		},
 	};
 }

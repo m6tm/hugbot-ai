@@ -3,7 +3,7 @@
  * Utilise l'adresse IP combinée avec un fingerprint pour identifier les utilisateurs
  */
 
-import { prisma } from "$lib/infrastructure/database/prisma";
+import prisma from "$lib/server/db";
 
 const MAX_GUEST_MESSAGES = 10;
 const RESET_INTERVAL_HOURS = 24;

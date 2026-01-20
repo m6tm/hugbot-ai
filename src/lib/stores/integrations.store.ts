@@ -1,9 +1,9 @@
 /**
  * Store pour gérer les intégrations avec des systèmes externes
+ * Utilise localStorage pour le stockage local des préférences
  */
 
 import { writable } from "svelte/store";
-import { db, isIndexedDBAvailable } from "$lib/infrastructure/database/db";
 import { httpClient } from "$lib/infrastructure/http";
 
 export interface TelegramIntegration {
@@ -18,7 +18,7 @@ export interface IntegrationsState {
 	telegram: TelegramIntegration;
 }
 
-const INTEGRATIONS_ID = "integrations_settings";
+const INTEGRATIONS_KEY = "hugbot_integrations";
 
 function getDefaultIntegrations(): IntegrationsState {
 	return {
@@ -32,41 +32,52 @@ function getDefaultIntegrations(): IntegrationsState {
 	};
 }
 
-async function loadIntegrations(): Promise<IntegrationsState> {
-	if (!isIndexedDBAvailable()) {
+function isLocalStorageAvailable(): boolean {
+	if (typeof window === "undefined") return false;
+	try {
+		const test = "__storage_test__";
+		window.localStorage.setItem(test, test);
+		window.localStorage.removeItem(test);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+function loadIntegrations(): IntegrationsState {
+	if (!isLocalStorageAvailable()) {
 		return getDefaultIntegrations();
 	}
 
 	try {
-		const stored = await db.settings.get(INTEGRATIONS_ID);
+		const stored = localStorage.getItem(INTEGRATIONS_KEY);
 		if (stored) {
+			const parsed = JSON.parse(stored);
 			return {
 				telegram: {
-					enabled: stored.telegram?.enabled || false,
-					botToken: stored.telegram?.botToken || "",
-					chatId: stored.telegram?.chatId || "",
-					sendOnNewMessage: stored.telegram?.sendOnNewMessage ?? true,
-					sendOnError: stored.telegram?.sendOnError ?? true,
+					enabled: parsed.telegram?.enabled || false,
+					botToken: parsed.telegram?.botToken || "",
+					chatId: parsed.telegram?.chatId || "",
+					sendOnNewMessage: parsed.telegram?.sendOnNewMessage ?? true,
+					sendOnError: parsed.telegram?.sendOnError ?? true,
 				},
 			};
 		}
-
-		const defaults = getDefaultIntegrations();
-		await saveIntegrations(defaults);
-		return defaults;
+		return getDefaultIntegrations();
 	} catch (error) {
 		console.error("Erreur lors du chargement des intégrations:", error);
 		return getDefaultIntegrations();
 	}
 }
 
-async function saveIntegrations(state: IntegrationsState): Promise<void> {
-	if (!isIndexedDBAvailable()) return;
+function saveIntegrations(state: IntegrationsState): void {
+	if (!isLocalStorageAvailable()) return;
 
-	await db.settings.put({
-		id: INTEGRATIONS_ID,
-		telegram: state.telegram,
-	});
+	try {
+		localStorage.setItem(INTEGRATIONS_KEY, JSON.stringify(state));
+	} catch (error) {
+		console.error("Erreur lors de la sauvegarde des intégrations:", error);
+	}
 }
 
 function createIntegrationsStore() {
@@ -78,10 +89,10 @@ function createIntegrationsStore() {
 		subscribe,
 
 		/**
-		 * Initialise le store depuis IndexedDB
+		 * Initialise le store depuis localStorage
 		 */
 		async init() {
-			const integrations = await loadIntegrations();
+			const integrations = loadIntegrations();
 			set(integrations);
 		},
 
@@ -159,7 +170,7 @@ function createIntegrationsStore() {
 		async reset() {
 			const defaultIntegrations = getDefaultIntegrations();
 			set(defaultIntegrations);
-			await saveIntegrations(defaultIntegrations);
+			saveIntegrations(defaultIntegrations);
 		},
 	};
 }

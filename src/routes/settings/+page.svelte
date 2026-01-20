@@ -73,7 +73,7 @@ let serverState = $state({
 });
 
 onMount(async () => {
-	// 1. Initialize Stores from Dexie
+	// 1. Initialiser les stores depuis le serveur
 	await integrationsStore.init();
 	await settingsStore.init();
 
@@ -138,35 +138,6 @@ function isDirty(section: string) {
 
 import type { ActionResult } from "@sveltejs/kit";
 
-/**
- * Déclenche la synchronisation des paramètres vers Supabase via Inngest
- */
-async function triggerSettingsSync(section: string) {
-	const payload: Record<string, unknown> = { section };
-
-	if (section === "appearance") {
-		payload.codeTheme = codeTheme;
-	} else if (section === "ai") {
-		payload.apiKey = apiKey;
-		payload.temperature = temperature;
-		payload.maxTokens = maxTokens;
-	} else if (section === "system") {
-		payload.systemInstruction = systemInstruction;
-	} else if (section === "integrations") {
-		payload.telegramEnabled = telegramEnabled;
-		payload.telegramBotToken = telegramBotToken;
-		payload.telegramChatId = telegramChatId;
-		payload.telegramSendOnNewMessage = telegramSendOnNewMessage;
-		payload.telegramSendOnError = telegramSendOnError;
-	}
-
-	try {
-		await httpClient.post("/api/sync/settings", payload);
-	} catch (error) {
-		console.error("Erreur lors de la synchronisation des paramètres:", error);
-	}
-}
-
 const handleSubmit = ({
 	formData,
 	cancel,
@@ -185,7 +156,7 @@ const handleSubmit = ({
 		else if (section === "integrations") isSavingIntegrations = true;
 
 		try {
-			// 1. Sauvegarde locale dans DexieJS via les stores
+			// Sauvegarde via les stores (appel API automatique)
 			if (section === "appearance") {
 				settingsStore.setCodeTheme(codeTheme);
 			} else if (section === "ai") {
@@ -205,10 +176,7 @@ const handleSubmit = ({
 				integrationsStore.toggleTelegram(telegramEnabled);
 			}
 
-			// 2. Déclencher la synchronisation async vers Supabase via Inngest
-			await triggerSettingsSync(section);
-
-			// 3. Mettre à jour le serverState pour refléter la sauvegarde (Optimistic UI)
+			// Mettre a jour le serverState pour refléter la sauvegarde
 			if (section === "appearance") {
 				serverState.codeTheme = codeTheme;
 			} else if (section === "ai") {
