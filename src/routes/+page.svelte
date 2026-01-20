@@ -1,20 +1,20 @@
 <script lang="ts">
-  /**
-   * Page principale du Chat AI
-   */
+/**
+ * Page principale du Chat AI
+ */
 
-  import { onMount } from "svelte";
-  import { ChatArea, Sidebar } from "$lib/components";
-  import { chatStore } from "$lib/stores/chat.store";
+import { onMount } from "svelte";
+import { ChatArea, Sidebar } from "$lib/components";
+import { chatStore } from "$lib/stores/chat.store";
 
-  let { data } = $props();
+let { data } = $props();
 
-  onMount(async () => {
-    if (data.session?.user) {
-      // Initialiser les conversations depuis le serveur
-      await chatStore.init(data.conversations || []);
-    }
-  });
+onMount(async () => {
+	if (data.session?.user) {
+		// Initialiser les conversations depuis le serveur
+		await chatStore.init(data.conversations || []);
+	}
+});
 </script>
 
 <div class="app-container">

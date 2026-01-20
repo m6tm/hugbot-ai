@@ -28,7 +28,38 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			});
 		}
 
-		return new Response(JSON.stringify(conversation), {
+		// Define expected type since Prisma inference can sometimes be tricky in SvelteKit endpoints
+		type ConversationWithMessages = {
+			id: string;
+			title: string;
+			createdAt: Date;
+			updatedAt: Date;
+			messages: {
+				id: string;
+				conversationId: string;
+				role: string;
+				content: string;
+				createdAt: Date;
+			}[];
+		};
+
+		const formattedConversation = {
+			id: conversation.id,
+			title: conversation.title,
+			createdAt: conversation.createdAt,
+			updatedAt: conversation.updatedAt,
+			messages: (
+				conversation as unknown as ConversationWithMessages
+			).messages.map((msg) => ({
+				id: msg.id,
+				conversationId: msg.conversationId,
+				role: msg.role as "user" | "assistant" | "system",
+				content: msg.content,
+				createdAt: msg.createdAt,
+			})),
+		};
+
+		return new Response(JSON.stringify(formattedConversation), {
 			headers: { "Content-Type": "application/json" },
 		});
 	} catch (error) {

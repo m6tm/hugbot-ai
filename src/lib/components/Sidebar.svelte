@@ -14,6 +14,7 @@ import {
 } from "$lib/stores";
 import ConversationItem from "./ConversationItem.svelte";
 import IconButton from "./ui/IconButton.svelte";
+import SkeletonConversationItem from "./ui/SkeletonConversationItem.svelte";
 
 let { session } = $props();
 
@@ -209,7 +210,12 @@ function handleConversationClick() {
     </div>
 
     <nav class="conversations-list">
-      {#if filteredConversations.length === 0}
+      {#if $chatStore.isLoading}
+        <!-- Skeletons loader -->
+        <SkeletonConversationItem />
+        <SkeletonConversationItem />
+        <SkeletonConversationItem />
+      {:else if filteredConversations.length === 0}
         <div class="empty-state">
           <p>Aucune conversation</p>
           <p class="hint">Commencez par creer un nouveau chat</p>

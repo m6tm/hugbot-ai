@@ -85,7 +85,18 @@ async function copyToClipboard() {
 }
 
 function formatTime(date: Date | string): string {
+	if (!date) {
+		console.warn("MessageBubble: date is missing", date);
+		return "";
+	}
 	const dateObj = typeof date === "string" ? new Date(date) : date;
+
+	// Check for invalid date
+	if (Number.isNaN(dateObj.getTime())) {
+		console.warn("MessageBubble: Invalid date", date);
+		return "";
+	}
+
 	return dateObj.toLocaleTimeString("fr-FR", {
 		hour: "2-digit",
 		minute: "2-digit",

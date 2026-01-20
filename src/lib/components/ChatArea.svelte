@@ -8,6 +8,7 @@ import { chatStore, currentConversation, currentMessages } from "$lib/stores";
 import ChatInput from "./ChatInput.svelte";
 import MessageBubble from "./MessageBubble.svelte";
 import ModelSelector from "./ModelSelector.svelte";
+import SkeletonMessageBubble from "./ui/SkeletonMessageBubble.svelte";
 import WelcomeScreen from "./WelcomeScreen.svelte";
 
 let messagesContainer = $state<HTMLDivElement>();
@@ -51,7 +52,14 @@ function dismissError() {
     </div>
 
     <div class="messages-container" bind:this={messagesContainer}>
-      {#if $currentMessages.length === 0}
+      {#if $chatStore.isMessagesLoading && $currentMessages.length === 0}
+        <div class="messages-list">
+          <!-- Skeletons -->
+          <SkeletonMessageBubble align="right" />
+          <SkeletonMessageBubble align="left" />
+          <SkeletonMessageBubble align="right" />
+        </div>
+      {:else if $currentMessages.length === 0}
         <div class="empty-chat">
           <div class="empty-icon">
             <svg

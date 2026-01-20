@@ -14,13 +14,6 @@ export const load: LayoutServerLoad = async ({
 		conversations = await db.conversation.findMany({
 			where: { userId: user.id },
 			orderBy: { updatedAt: "desc" },
-			include: {
-				messages: {
-					take: 1,
-					orderBy: { createdAt: "desc" },
-					select: { content: true },
-				},
-			},
 		});
 	}
 

@@ -3,7 +3,7 @@
  */
 
 // Application
-export * from "./application/use-cases";
+
 // Composants
 export * from "./components";
 // Configuration

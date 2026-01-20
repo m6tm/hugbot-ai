@@ -14,6 +14,7 @@ interface ChatState {
 	conversations: Conversation[];
 	currentConversationId: string | null;
 	isLoading: boolean;
+	isMessagesLoading: boolean;
 	isStreaming: boolean;
 	streamingContent: string;
 	error: string | null;
@@ -23,6 +24,7 @@ const initialState: ChatState = {
 	conversations: [],
 	currentConversationId: null,
 	isLoading: false,
+	isMessagesLoading: false,
 	isStreaming: false,
 	streamingContent: "",
 	error: null,
@@ -50,9 +52,18 @@ function createChatStore() {
 		 */
 		async init(serverConversations: Conversation[] = []) {
 			if (serverConversations.length > 0) {
+				const hydratedConversations = serverConversations.map((c) => ({
+					...c,
+					createdAt: new Date(c.createdAt),
+					updatedAt: new Date(c.updatedAt),
+					messages: (c.messages || []).map((m) => ({
+						...m,
+						createdAt: new Date(m.createdAt),
+					})),
+				}));
 				update((state) => ({
 					...state,
-					conversations: serverConversations,
+					conversations: hydratedConversations,
 					isLoading: false,
 				}));
 				return;
@@ -62,9 +73,20 @@ function createChatStore() {
 			try {
 				const { data: conversations } =
 					await httpClient.get<Conversation[]>("/api/conversations");
+
+				const hydratedConversations = conversations.map((c) => ({
+					...c,
+					createdAt: new Date(c.createdAt),
+					updatedAt: new Date(c.updatedAt),
+					messages: c.messages.map((m) => ({
+						...m,
+						createdAt: new Date(m.createdAt),
+					})),
+				}));
+
 				update((state) => ({
 					...state,
-					conversations,
+					conversations: hydratedConversations,
 					isLoading: false,
 				}));
 			} catch (error) {
@@ -127,18 +149,26 @@ function createChatStore() {
 		},
 
 		async loadConversationMessages(id: string) {
+			update((state) => ({ ...state, isMessagesLoading: true }));
 			try {
 				const { data: fullConv } = await httpClient.get<{
 					messages: Conversation["messages"];
 				}>(`/api/conversations/${id}`);
+				const messages = (fullConv.messages || []).map((m) => ({
+					...m,
+					createdAt: new Date(m.createdAt),
+				}));
+
 				update((state) => ({
 					...state,
 					conversations: state.conversations.map((c) =>
-						c.id === id ? { ...c, messages: fullConv.messages } : c,
+						c.id === id ? { ...c, messages: messages } : c,
 					),
+					isMessagesLoading: false,
 				}));
 			} catch (e) {
 				console.error("Failed to load messages", e);
+				update((state) => ({ ...state, isMessagesLoading: false }));
 			}
 		},
 
@@ -154,6 +184,7 @@ function createChatStore() {
 			// Load messages if they are empty (or only have preview)
 			const state = get({ subscribe });
 			const _conv = state.conversations.find((c) => c.id === id);
+
 			// Rough check: if we have 0 or 1 message it might be preview, but what if it's really 1?
 			// Use a flag or check if we loaded it. For now let's always fetch to be safe or check if messages count matches expected?
 			// Simpler: Just fetch transparently
