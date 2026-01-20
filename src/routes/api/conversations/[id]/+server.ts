@@ -47,6 +47,12 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 		});
 
 	try {
+		const conversation = await db.conversation.findUnique({
+			where: { id: params.id, userId: user.id },
+		});
+		if (!conversation) {
+			return new Response(JSON.stringify({ success: true }));
+		}
 		await db.conversation.delete({
 			where: { id: params.id, userId: user.id },
 		});
