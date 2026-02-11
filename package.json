@@ -30,7 +30,7 @@
 		"vite-plugin-wasm": "^3.5.0"
 	},
 	"dependencies": {
-		"@langchain/community": "^1.1.2",
+		"@langchain/community": "^1.1.14",
 		"@langchain/core": "^1.1.11",
 		"@prisma/client": "^5.22.0",
 		"@supabase/ssr": "^0.8.0",
